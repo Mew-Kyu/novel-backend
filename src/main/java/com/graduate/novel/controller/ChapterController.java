@@ -1,0 +1,150 @@
+package com.graduate.novel.controller;
+
+import com.graduate.novel.domain.chapter.ChapterDto;
+import com.graduate.novel.domain.chapter.ChapterService;
+import com.graduate.novel.domain.chapter.CreateChapterRequest;
+import com.graduate.novel.domain.chapter.UpdateChapterRequest;
+import com.graduate.novel.domain.chapter.UpdateChapterTranslationRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/stories/{storyId}/chapters")
+@RequiredArgsConstructor
+public class ChapterController {
+
+    private final ChapterService chapterService;
+
+    @GetMapping
+    public ResponseEntity<List<ChapterDto>> getChaptersByStoryId(@PathVariable Long storyId) {
+        List<ChapterDto> chapters = chapterService.getChaptersByStoryId(storyId);
+        return ResponseEntity.ok(chapters);
+    }
+
+    @GetMapping("/{chapterId}")
+    public ResponseEntity<ChapterDto> getChapterById(
+            @PathVariable Long storyId,
+            @PathVariable Long chapterId
+    ) {
+        ChapterDto chapter = chapterService.getChapterById(storyId, chapterId);
+        return ResponseEntity.ok(chapter);
+    }
+
+    @PostMapping
+    public ResponseEntity<ChapterDto> createChapter(
+            @PathVariable Long storyId,
+            @Valid @RequestBody CreateChapterRequest request
+    ) {
+        ChapterDto chapter = chapterService.createChapter(storyId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(chapter);
+    }
+
+    @PutMapping("/{chapterId}")
+    public ResponseEntity<ChapterDto> updateChapter(
+            @PathVariable Long storyId,
+            @PathVariable Long chapterId,
+            @Valid @RequestBody UpdateChapterRequest request
+    ) {
+        ChapterDto chapter = chapterService.updateChapter(storyId, chapterId, request);
+        return ResponseEntity.ok(chapter);
+    }
+
+    @DeleteMapping("/{chapterId}")
+    public ResponseEntity<Void> deleteChapter(
+            @PathVariable Long storyId,
+            @PathVariable Long chapterId
+    ) {
+        chapterService.deleteChapter(storyId, chapterId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{chapterId}/raw-content")
+    public ResponseEntity<ChapterDto> updateRawContent(
+            @PathVariable Long storyId,
+            @PathVariable Long chapterId,
+            @RequestBody Map<String, String> body
+    ) {
+        String rawContent = body.get("rawContent");
+        ChapterDto chapter = chapterService.updateRawContent(storyId, chapterId, rawContent);
+        return ResponseEntity.ok(chapter);
+    }
+
+    @PatchMapping("/{chapterId}/translation")
+    public ResponseEntity<ChapterDto> updateTranslation(
+            @PathVariable Long storyId,
+            @PathVariable Long chapterId,
+            @Valid @RequestBody UpdateChapterTranslationRequest request
+    ) {
+        ChapterDto chapter = chapterService.updateTranslation(storyId, chapterId, request.translatedContent());
+        return ResponseEntity.ok(chapter);
+    }
+
+    @PatchMapping("/{chapterId}/crawl-status")
+    public ResponseEntity<Void> updateCrawlStatus(
+            @PathVariable Long chapterId,
+            @RequestBody Map<String, String> body
+    ) {
+        String status = body.get("status");
+        String errorMessage = body.get("errorMessage");
+        chapterService.updateCrawlStatus(chapterId, status, errorMessage);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{chapterId}/translate-status")
+    public ResponseEntity<Void> updateTranslateStatus(
+            @PathVariable Long chapterId,
+            @RequestBody Map<String, String> body
+    ) {
+        String status = body.get("status");
+        String errorMessage = body.get("errorMessage");
+        chapterService.updateTranslateStatus(chapterId, status, errorMessage);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Automatically translate a chapter using AI
+     */
+    @PostMapping("/{chapterId}/translate")
+    public ResponseEntity<ChapterDto> translateChapter(
+            @PathVariable Long storyId,
+            @PathVariable Long chapterId
+    ) {
+        ChapterDto chapter = chapterService.translateChapter(storyId, chapterId);
+        return ResponseEntity.ok(chapter);
+    }
+
+    /**
+     * Translate all untranslated chapters for a story
+     */
+    @PostMapping("/translate-all")
+    public ResponseEntity<Map<String, String>> translateAllChapters(@PathVariable Long storyId) {
+        // Run in background to avoid timeout
+        new Thread(() -> chapterService.translateAllChaptersForStory(storyId)).start();
+
+        Map<String, String> response = Map.of(
+                "message", "Translation started for all chapters",
+                "storyId", storyId.toString()
+        );
+        return ResponseEntity.accepted().body(response);
+    }
+
+    /**
+     * Retry failed translations
+     */
+    @PostMapping("/retry-failed-translations")
+    public ResponseEntity<Map<String, String>> retryFailedTranslations(@PathVariable Long storyId) {
+        new Thread(() -> chapterService.retryFailedTranslations(storyId)).start();
+
+        Map<String, String> response = Map.of(
+                "message", "Retrying failed translations",
+                "storyId", storyId.toString()
+        );
+        return ResponseEntity.accepted().body(response);
+    }
+}
