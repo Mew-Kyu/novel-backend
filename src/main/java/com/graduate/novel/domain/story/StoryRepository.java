@@ -15,6 +15,12 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
     Page<Story> findByTitleContainingOrDescriptionContaining(
             String title, String description, Pageable pageable);
 
+    @Query("SELECT DISTINCT s FROM Story s JOIN s.genres g WHERE g.id = :genreId")
+    Page<Story> findByGenreId(@Param("genreId") Long genreId, Pageable pageable);
+
+    @Query("SELECT DISTINCT s FROM Story s JOIN s.genres g WHERE g.name = :genreName")
+    Page<Story> findByGenreName(@Param("genreName") String genreName, Pageable pageable);
+
     List<Story> findBySourceSite(String sourceSite);
     List<Story> findBySourceUrl(String sourceUrl);
 

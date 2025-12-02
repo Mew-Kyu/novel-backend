@@ -1,0 +1,1302 @@
+{
+	"info": {
+		"_postman_id": "novel-backend-api-collection",
+		"name": "Novel Backend API",
+		"description": "Complete API collection for Novel Backend application",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Test User\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.collectionVariables.set(\"jwt_token\", jsonData.accessToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Genres",
+			"item": [
+				{
+					"name": "Get All Genres",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/genres",
+							"host": ["{{base_url}}"],
+							"path": ["api", "genres"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Genre by ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/genres/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "genres", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Genre by Name",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/genres/name/Fantasy",
+							"host": ["{{base_url}}"],
+							"path": ["api", "genres", "name", "Fantasy"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Genre",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Fantasy\",\n  \"description\": \"Fantasy genre description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/genres",
+							"host": ["{{base_url}}"],
+							"path": ["api", "genres"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Genre",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Fantasy Updated\",\n  \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/genres/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "genres", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Genre",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/genres/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "genres", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Stories",
+			"item": [
+				{
+					"name": "Get All Stories",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Stories by Keyword",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories?keyword=search_term&page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories"],
+							"query": [
+								{
+									"key": "keyword",
+									"value": "search_term"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stories by Genre ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories?genreId=1&page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories"],
+							"query": [
+								{
+									"key": "genreId",
+									"value": "1"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stories by Genre Name",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories?genre=Fantasy&page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories"],
+							"query": [
+								{
+									"key": "genre",
+									"value": "Fantasy"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Story by ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Story",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"My Novel Title\",\n  \"author\": \"Author Name\",\n  \"description\": \"Story description\",\n  \"sourceUrl\": \"https://example.com/novel\",\n  \"genreId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Story",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Title\",\n  \"author\": \"Updated Author\",\n  \"description\": \"Updated description\",\n  \"genreId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Story",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Translate Story (Title & Description)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"storyId\": 1,\n  \"translateTitle\": true,\n  \"translateDescription\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/translate/story",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "translate", "story"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Translate Story by ID",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/translate/story/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "translate", "story", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chapters",
+			"item": [
+				{
+					"name": "Get Chapters by Story ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chapter by ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Chapter",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"chapterNumber\": 1,\n  \"title\": \"Chapter 1: The Beginning\",\n  \"content\": \"Chapter content here...\",\n  \"sourceUrl\": \"https://example.com/novel/chapter-1\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Chapter",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Chapter Title\",\n  \"content\": \"Updated content...\",\n  \"chapterNumber\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Chapter",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Raw Content",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rawContent\": \"Raw content in original language...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1/raw-content",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1", "raw-content"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Translation",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"translatedContent\": \"Translated chapter content...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1/translation",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1", "translation"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Crawl Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"COMPLETED\",\n  \"errorMessage\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1/crawl-status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1", "crawl-status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Translate Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"COMPLETED\",\n  \"errorMessage\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1/translate-status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1", "translate-status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Translate Chapter",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/1/translate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "1", "translate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Translate All Chapters",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/translate-all",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "translate-all"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Retry Failed Translations",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/chapters/retry-failed-translations",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "chapters", "retry-failed-translations"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Crawl Jobs",
+			"item": [
+				{
+					"name": "Get All Jobs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/jobs",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Jobs by Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/jobs?status=PENDING",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs"],
+							"query": [
+								{
+									"key": "status",
+									"value": "PENDING"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Job by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/jobs/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Job",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"storyId\": 1,\n  \"chapterId\": 1,\n  \"jobType\": \"CRAWL\",\n  \"targetUrl\": \"https://example.com/novel/chapter-1\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/jobs",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Job Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"COMPLETED\",\n  \"errorMessage\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/jobs/1/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs", "1", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Job",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/jobs/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Jobs by Story",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/jobs/by-story/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs", "by-story", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Jobs by Story and Type",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/jobs/by-story/1?jobType=CRAWL",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs", "by-story", "1"],
+							"query": [
+								{
+									"key": "jobType",
+									"value": "CRAWL"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Jobs by Chapter",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/jobs/by-chapter/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "jobs", "by-chapter", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Ratings",
+			"item": [
+				{
+					"name": "Create or Update Rating",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"storyId\": 1,\n  \"rating\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ratings",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Rating",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 4\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ratings/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Rating",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ratings/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ratings by Story",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ratings/story/1?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "story", "1"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Story Rating Average",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ratings/story/1/average",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "story", "1", "average"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Ratings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ratings/user/me?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "user", "me"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Rating for Story",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ratings/story/1/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "story", "1", "me"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Comments",
+			"item": [
+				{
+					"name": "Create Comment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"storyId\": 1,\n  \"content\": \"This is a great story!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/comments",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Comment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Updated comment content\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/comments/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Comment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Comment by ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Comments by Story",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/story/1?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "story", "1"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Comment Count by Story",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/story/1/count",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "story", "1", "count"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Comments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/user/me?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "user", "me"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Reading History",
+			"item": [
+				{
+					"name": "Get Reading History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/history?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "history"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Reading Progress",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"storyId\": 1,\n  \"chapterId\": 1,\n  \"progress\": 50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/history",
+							"host": ["{{base_url}}"],
+							"path": ["api", "history"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI Services",
+			"item": [
+				{
+					"name": "Translate Text",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"こんにちは、世界\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ai/translate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "translate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auto Translate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"こんにちは\",\n  \"sourceLanguage\": \"ja\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ai/translate/auto",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "translate", "auto"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Semantic Search",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"fantasy adventure story\",\n  \"limit\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ai/search/semantic",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "search", "semantic"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate Story Embedding",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ai/embeddings/story/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "embeddings", "story", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate All Embeddings",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ai/embeddings/generate-all",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "embeddings", "generate-all"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Story Embedding",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ai/embeddings/story/1/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "embeddings", "story", "1", "refresh"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AI Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ai/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "health"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
+

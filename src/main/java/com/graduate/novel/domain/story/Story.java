@@ -1,9 +1,12 @@
 package com.graduate.novel.domain.story;
 
+import com.graduate.novel.domain.genre.Genre;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "stories")
@@ -53,6 +56,15 @@ public class Story {
     @Column(name = "source_site", length = 255)
     @Builder.Default
     private String sourceSite = "syosetu";
+
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+            name = "story_genres",
+            joinColumns = @JoinColumn(name = "story_id"),
+            inverseJoinColumns = @JoinColumn(name = "genre_id")
+    )
+    @Builder.Default
+    private Set<Genre> genres = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

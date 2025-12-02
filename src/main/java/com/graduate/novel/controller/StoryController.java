@@ -27,9 +27,18 @@ public class StoryController {
     @GetMapping
     public ResponseEntity<Page<StoryDto>> getStories(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long genreId,
+            @RequestParam(required = false) String genre,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Page<StoryDto> stories = storyService.getStories(keyword, pageable);
+        Page<StoryDto> stories;
+        if (genreId != null) {
+            stories = storyService.getStoriesByGenre(genreId, pageable);
+        } else if (genre != null && !genre.isEmpty()) {
+            stories = storyService.getStoriesByGenreName(genre, pageable);
+        } else {
+            stories = storyService.getStories(keyword, pageable);
+        }
         return ResponseEntity.ok(stories);
     }
 

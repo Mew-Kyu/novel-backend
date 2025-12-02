@@ -40,12 +40,24 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health").permitAll()
                         // AI semantic search endpoint - no token required
                         .requestMatchers(HttpMethod.POST, "/api/ai/search/semantic").permitAll()
+                        // Public genre READ endpoints - no token required (GET only)
+                        .requestMatchers(HttpMethod.GET, "/api/genres", "/api/genres/**").permitAll()
+                        // Genre CUD endpoints require authentication (POST, PUT, DELETE)
+                        .requestMatchers(HttpMethod.POST, "/api/genres").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/genres/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/genres/**").authenticated()
                         // Public story endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stories").permitAll() // GET /api/stories
                         .requestMatchers(HttpMethod.GET, "/api/stories/*").permitAll() // GET /api/stories/{id}
                         // Public chapter endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters").permitAll() // GET /api/stories/{storyId}/chapters
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters/*").permitAll() // GET /api/stories/{storyId}/chapters/{chapterId}
+                        // Public rating/comment read endpoints - no token required
+                        .requestMatchers(HttpMethod.GET, "/api/ratings/story/*/average").permitAll() // GET average rating
+                        .requestMatchers(HttpMethod.GET, "/api/ratings/story/*").permitAll() // GET ratings for a story
+                        .requestMatchers(HttpMethod.GET, "/api/comments/story/*").permitAll() // GET comments for a story
+                        .requestMatchers(HttpMethod.GET, "/api/comments/story/*/count").permitAll() // GET comment count
+                        .requestMatchers(HttpMethod.GET, "/api/comments/*").permitAll() // GET single comment
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )

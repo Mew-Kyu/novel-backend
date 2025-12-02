@@ -28,6 +28,18 @@ public class StoryService {
     }
 
     @Transactional(readOnly = true)
+    public Page<StoryDto> getStoriesByGenre(Long genreId, Pageable pageable) {
+        Page<Story> stories = storyRepository.findByGenreId(genreId, pageable);
+        return stories.map(storyMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StoryDto> getStoriesByGenreName(String genreName, Pageable pageable) {
+        Page<Story> stories = storyRepository.findByGenreName(genreName, pageable);
+        return stories.map(storyMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
     public StoryDto getStoryById(Long id) {
         Story story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + id));
