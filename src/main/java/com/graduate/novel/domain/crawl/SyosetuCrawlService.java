@@ -52,12 +52,13 @@ public class SyosetuCrawlService {
             Document mainPage = fetchDocument(baseUrl);
             String title = extractTitle(mainPage);
             String description = extractDescription(mainPage);
+            String authorName = extractAuthorName(mainPage);
 
-            log.info("Crawled novel info - Title: {}, Description length: {}",
-                    title, description != null ? description.length() : 0);
+            log.info("Crawled novel info - Title: {}, Author: {}, Description length: {}",
+                    title, authorName, description != null ? description.length() : 0);
 
             // Step 2: Save or update story
-            Story story = saveOrUpdateStory(baseUrl, title, description);
+            Story story = saveOrUpdateStory(baseUrl, title, description, authorName);
 
             // Step 3: Determine chapter range
             int startChapter = request.getStartChapter() != null ? request.getStartChapter() : 1;
@@ -192,10 +193,44 @@ public class SyosetuCrawlService {
     }
 
     /**
+     * Extract author name from main page
+     * Author name is typically after "作者：" text
+     */
+    private String extractAuthorName(Document doc) {
+        // Try to find author in the novel_writername div
+        Element authorElement = doc.selectFirst(".novel_writername");
+        if (authorElement != null) {
+            String text = authorElement.text();
+            // Author name is usually after "作者："
+            // Example: "作者：錬金王"
+            if (text.contains("作者：")) {
+                String authorName = text.substring(text.indexOf("作者：") + 3).trim();
+                // Remove any trailing links or extra text
+                if (authorName.contains("(") || authorName.contains("（")) {
+                    authorName = authorName.split("[（(]")[0].trim();
+                }
+                log.info("Extracted author name: {}", authorName);
+                return authorName;
+            }
+            // If no "作者：" prefix, return the whole text
+            return text.trim();
+        }
+
+        // Try alternative selector
+        authorElement = doc.selectFirst(".p-novel__author");
+        if (authorElement != null) {
+            return authorElement.text().replaceFirst("作者：", "").trim();
+        }
+
+        log.warn("Could not find author name in page");
+        return null;
+    }
+
+    /**
      * Save or update story in database
      */
     @Transactional
-    private Story saveOrUpdateStory(String sourceUrl, String title, String description) {
+    private Story saveOrUpdateStory(String sourceUrl, String title, String description, String authorName) {
         // Check if story already exists by source URL
         var existingStories = storyRepository.findBySourceUrl(sourceUrl);
 
@@ -206,6 +241,8 @@ public class SyosetuCrawlService {
             story.setRawTitle(title);
             story.setDescription(description);
             story.setRawDescription(description);
+            story.setAuthorName(authorName);
+            story.setRawAuthorName(authorName);
             log.info("Updating existing story ID: {}", story.getId());
             return storyRepository.save(story);
         } else {
@@ -215,6 +252,8 @@ public class SyosetuCrawlService {
                     .rawTitle(title)
                     .description(description)
                     .rawDescription(description)
+                    .authorName(authorName)
+                    .rawAuthorName(authorName)
                     .sourceUrl(sourceUrl)
                     .sourceSite("syosetu")
                     .build();
@@ -236,10 +275,12 @@ public class SyosetuCrawlService {
             // Fetch chapter page
             Document chapterDoc = fetchDocument(chapterUrl);
             log.debug("Fetched chapter page. Title: {}", chapterDoc.title());
+            log.info("📄 Page URL: {}", chapterUrl);
+            log.info("📄 Page title tag: {}", chapterDoc.title());
 
             // Extract chapter title (subtitle)
             String chapterTitle = extractChapterTitle(chapterDoc, chapterNum);
-            log.debug("Chapter title: {}", chapterTitle);
+            log.info("📝 Extracted chapter title: {}", chapterTitle);
 
             // Extract chapter content
             String content = extractChapterContent(chapterDoc);
@@ -261,6 +302,7 @@ public class SyosetuCrawlService {
                 // Update existing chapter
                 chapter = existingChapter.get();
                 chapter.setTitle(chapterTitle);
+                chapter.setRawTitle(chapterTitle);
                 chapter.setRawContent(content);
                 chapter.setCrawlStatus("SUCCESS");
                 chapter.setCrawlTime(LocalDateTime.now());
@@ -271,6 +313,7 @@ public class SyosetuCrawlService {
                         .story(story)
                         .chapterIndex(chapterNum)
                         .title(chapterTitle)
+                        .rawTitle(chapterTitle)
                         .rawContent(content)
                         .crawlStatus("SUCCESS")
                         .crawlTime(LocalDateTime.now())
@@ -292,13 +335,90 @@ public class SyosetuCrawlService {
      * Extract chapter title (subtitle)
      */
     private String extractChapterTitle(Document doc, int chapterNum) {
-        // Try .novel_subtitle first
+        log.debug("Attempting to extract chapter title for chapter {}", chapterNum);
+
+        // Try .novel_subtitle first (most common)
         Element subtitleElement = doc.selectFirst(".novel_subtitle");
         if (subtitleElement != null && !subtitleElement.text().trim().isEmpty()) {
-            return subtitleElement.text().trim();
+            String title = subtitleElement.text().trim();
+            log.info("Found chapter title using .novel_subtitle: {}", title);
+            return title;
+        }
+
+        // Try p.novel_subtitle
+        subtitleElement = doc.selectFirst("p.novel_subtitle");
+        if (subtitleElement != null && !subtitleElement.text().trim().isEmpty()) {
+            String title = subtitleElement.text().trim();
+            log.info("Found chapter title using p.novel_subtitle: {}", title);
+            return title;
+        }
+
+        // Try .p-novel__title
+        subtitleElement = doc.selectFirst(".p-novel__title");
+        if (subtitleElement != null && !subtitleElement.text().trim().isEmpty()) {
+            String title = subtitleElement.text().trim();
+            log.info("Found chapter title using .p-novel__title: {}", title);
+            return title;
+        }
+
+        // Try #novel_subtitle
+        subtitleElement = doc.selectFirst("#novel_subtitle");
+        if (subtitleElement != null && !subtitleElement.text().trim().isEmpty()) {
+            String title = subtitleElement.text().trim();
+            log.info("Found chapter title using #novel_subtitle: {}", title);
+            return title;
+        }
+
+        // Try h1 (sometimes chapter title is in h1)
+        subtitleElement = doc.selectFirst("h1");
+        if (subtitleElement != null) {
+            String text = subtitleElement.text().trim();
+            // Check if it's not the main novel title (usually main title is longer)
+            if (!text.isEmpty() && !text.contains("小説家になろう")) {
+                log.info("Found chapter title using h1: {}", text);
+                return text;
+            }
+        }
+
+        // Try .chapter-title or similar
+        subtitleElement = doc.selectFirst(".chapter-title");
+        if (subtitleElement != null && !subtitleElement.text().trim().isEmpty()) {
+            String title = subtitleElement.text().trim();
+            log.info("Found chapter title using .chapter-title: {}", title);
+            return title;
+        }
+
+        // Debug: Log available classes and IDs
+        log.warn("Could not find chapter title using any known selector for chapter {}", chapterNum);
+        log.debug("Available classes in page: {}",
+            doc.select("[class]").stream()
+                .map(Element::className)
+                .distinct()
+                .limit(20)
+                .toList());
+        log.debug("Available IDs in page: {}",
+            doc.select("[id]").stream()
+                .map(Element::id)
+                .distinct()
+                .limit(20)
+                .toList());
+
+        // Last resort: check page title
+        String pageTitle = doc.title();
+        if (pageTitle != null && !pageTitle.isEmpty()) {
+            // Try to extract subtitle from page title (format: "Chapter Title - Novel Title")
+            String[] parts = pageTitle.split("-|｜|\\|");
+            if (parts.length > 1) {
+                String possibleTitle = parts[0].trim();
+                if (!possibleTitle.isEmpty() && !possibleTitle.equals("小説家になろう")) {
+                    log.info("Extracted chapter title from page title: {}", possibleTitle);
+                    return possibleTitle;
+                }
+            }
         }
 
         // Fallback to generic title
+        log.warn("Using fallback generic title for chapter {}", chapterNum);
         return "Chapter " + chapterNum;
     }
 

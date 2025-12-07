@@ -27,6 +27,12 @@ public class Chapter {
     @Column(columnDefinition = "TEXT")
     private String title;
 
+    @Column(name = "raw_title", columnDefinition = "TEXT")
+    private String rawTitle;
+
+    @Column(name = "translated_title", columnDefinition = "TEXT")
+    private String translatedTitle;
+
     // RAW content (original Japanese from syosetu)
     @Column(name = "raw_content", columnDefinition = "TEXT")
     private String rawContent;

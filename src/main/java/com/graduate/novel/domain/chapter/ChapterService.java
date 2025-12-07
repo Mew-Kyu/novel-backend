@@ -157,14 +157,27 @@ public class ChapterService {
             throw new BadRequestException("Cannot translate: Chapter has no raw content");
         }
 
-        log.info("Starting translation for chapter {} of story {}", chapterId, storyId);
+        log.info("Starting translation for chapterId={} (index={}) of storyId={}",
+                chapterId, chapter.getChapterIndex(), storyId);
 
         try {
             // Set status to PENDING
             chapter.setTranslateStatus("PENDING");
             chapterRepository.save(chapter);
 
-            // Perform translation
+            // Translate chapter title if raw title exists
+            if (chapter.getRawTitle() != null && !chapter.getRawTitle().trim().isEmpty()) {
+                log.info("Translating chapter title for chapterId={} (index={})",
+                        chapterId, chapter.getChapterIndex());
+                String translatedTitle = translationService.translateToVietnamese(chapter.getRawTitle());
+                chapter.setTranslatedTitle(translatedTitle);
+                // Also update the main title field for backward compatibility
+                chapter.setTitle(translatedTitle);
+                log.info("Chapter title translated successfully: '{}' -> '{}'",
+                        chapter.getRawTitle(), translatedTitle);
+            }
+
+            // Perform translation of content
             String translatedContent = translationService.translateToVietnamese(chapter.getRawContent());
 
             // Update chapter with translation
@@ -173,12 +186,14 @@ public class ChapterService {
             chapter.setTranslateTime(LocalDateTime.now());
 
             chapter = chapterRepository.save(chapter);
-            log.info("Successfully translated chapter {} of story {}", chapterId, storyId);
+            log.info("✅ Successfully translated chapterId={} (index={}) of storyId={}",
+                    chapterId, chapter.getChapterIndex(), storyId);
 
             return chapterMapper.toDto(chapter);
 
         } catch (Exception e) {
-            log.error("Failed to translate chapter {} of story {}: {}", chapterId, storyId, e.getMessage());
+            log.error("❌ Failed to translate chapterId={} (index={}) of storyId={}: {}",
+                    chapterId, chapter.getChapterIndex(), storyId, e.getMessage());
             chapter.setTranslateStatus("FAILED");
             chapter.setTranslateTime(LocalDateTime.now());
             chapterRepository.save(chapter);
@@ -198,14 +213,22 @@ public class ChapterService {
         List<Chapter> chapters = chapterRepository.findByStoryIdAndTranslateStatusAndRawContentIsNotNull(
                 storyId, "NONE");
 
-        log.info("Found {} chapters to translate for story {}", chapters.size(), storyId);
+        log.info("Found {} chapters to translate for storyId={}", chapters.size(), storyId);
 
         for (Chapter chapter : chapters) {
             try {
-                log.info("Translating chapter {} (index: {})", chapter.getId(), chapter.getChapterIndex());
+                log.info("Translating chapterId={} (index={}) of storyId={}",
+                        chapter.getId(), chapter.getChapterIndex(), storyId);
 
                 chapter.setTranslateStatus("PENDING");
                 chapterRepository.save(chapter);
+
+                // Translate chapter title if raw title exists
+                if (chapter.getRawTitle() != null && !chapter.getRawTitle().trim().isEmpty()) {
+                    String translatedTitle = translationService.translateToVietnamese(chapter.getRawTitle());
+                    chapter.setTranslatedTitle(translatedTitle);
+                    chapter.setTitle(translatedTitle);
+                }
 
                 String translatedContent = translationService.translateToVietnamese(chapter.getRawContent());
 
@@ -214,20 +237,22 @@ public class ChapterService {
                 chapter.setTranslateTime(LocalDateTime.now());
                 chapterRepository.save(chapter);
 
-                log.info("Successfully translated chapter {}", chapter.getId());
+                log.info("✅ Successfully translated chapterId={} (index={})",
+                        chapter.getId(), chapter.getChapterIndex());
 
                 // Add small delay to avoid rate limiting
                 Thread.sleep(1000);
 
             } catch (Exception e) {
-                log.error("Failed to translate chapter {}: {}", chapter.getId(), e.getMessage());
+                log.error("❌ Failed to translate chapterId={} (index={}): {}",
+                        chapter.getId(), chapter.getChapterIndex(), e.getMessage());
                 chapter.setTranslateStatus("FAILED");
                 chapter.setTranslateTime(LocalDateTime.now());
                 chapterRepository.save(chapter);
             }
         }
 
-        log.info("Completed translation for story {}", storyId);
+        log.info("Completed translation for storyId={}", storyId);
     }
 
     /**
@@ -237,13 +262,22 @@ public class ChapterService {
     public void retryFailedTranslations(Long storyId) {
         List<Chapter> failedChapters = chapterRepository.findByStoryIdAndTranslateStatus(storyId, "FAILED");
 
-        log.info("Retrying {} failed translations for story {}", failedChapters.size(), storyId);
+        log.info("Retrying {} failed translations for storyId={}", failedChapters.size(), storyId);
 
         for (Chapter chapter : failedChapters) {
             try {
                 if (chapter.getRawContent() != null && !chapter.getRawContent().trim().isEmpty()) {
+                    log.info("Retrying chapterId={} (index={})", chapter.getId(), chapter.getChapterIndex());
+
                     chapter.setTranslateStatus("PENDING");
                     chapterRepository.save(chapter);
+
+                    // Translate chapter title if raw title exists
+                    if (chapter.getRawTitle() != null && !chapter.getRawTitle().trim().isEmpty()) {
+                        String translatedTitle = translationService.translateToVietnamese(chapter.getRawTitle());
+                        chapter.setTranslatedTitle(translatedTitle);
+                        chapter.setTitle(translatedTitle);
+                    }
 
                     String translatedContent = translationService.translateToVietnamese(chapter.getRawContent());
 
@@ -252,10 +286,14 @@ public class ChapterService {
                     chapter.setTranslateTime(LocalDateTime.now());
                     chapterRepository.save(chapter);
 
+                    log.info("✅ Retry succeeded for chapterId={} (index={})",
+                            chapter.getId(), chapter.getChapterIndex());
+
                     Thread.sleep(1000);
                 }
             } catch (Exception e) {
-                log.error("Retry failed for chapter {}: {}", chapter.getId(), e.getMessage());
+                log.error("❌ Retry failed for chapterId={} (index={}): {}",
+                        chapter.getId(), chapter.getChapterIndex(), e.getMessage());
                 chapter.setTranslateStatus("FAILED");
                 chapterRepository.save(chapter);
             }

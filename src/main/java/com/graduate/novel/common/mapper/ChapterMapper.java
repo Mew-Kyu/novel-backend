@@ -19,6 +19,8 @@ public interface ChapterMapper {
     @Mapping(target = "crawlTime", ignore = true)
     @Mapping(target = "translateTime", ignore = true)
     @Mapping(target = "translatedContent", ignore = true)
+    @Mapping(target = "rawTitle", ignore = true)
+    @Mapping(target = "translatedTitle", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     Chapter toEntity(CreateChapterRequest request);
 
@@ -28,6 +30,8 @@ public interface ChapterMapper {
     @Mapping(target = "translateStatus", ignore = true)
     @Mapping(target = "crawlTime", ignore = true)
     @Mapping(target = "translateTime", ignore = true)
+    @Mapping(target = "rawTitle", ignore = true)
+    @Mapping(target = "translatedTitle", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     void updateEntity(UpdateChapterRequest request, @MappingTarget Chapter chapter);
 }

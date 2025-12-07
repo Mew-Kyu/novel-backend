@@ -102,6 +102,37 @@ public class TranslationService {
     }
 
     /**
+     * Romanize Japanese text (convert Kanji/Hiragana to Romaji)
+     * Used for author names to keep them readable but not translated
+     */
+    public String romanizeJapanese(String japaneseText) {
+        if (japaneseText == null || japaneseText.trim().isEmpty()) {
+            log.warn("Empty text provided for romanization");
+            return "";
+        }
+
+        log.info("Romanizing Japanese text to Romaji (length: {} chars)", japaneseText.length());
+
+        String prompt = buildRomanizationPrompt(japaneseText);
+
+        GeminiRequest.GenerationConfig config = GeminiRequest.GenerationConfig.builder()
+                .temperature(0.1)  // Very low temperature for consistent romanization
+                .maxOutputTokens(512)
+                .topP(0.95)
+                .topK(40)
+                .build();
+
+        try {
+            String romanized = geminiService.generateContent(prompt, config);
+            log.info("Romanization completed successfully");
+            return romanized != null ? romanized.trim() : "";
+        } catch (Exception e) {
+            log.error("Romanization failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to romanize text", e);
+        }
+    }
+
+    /**
      * Build translation prompt for Japanese to Vietnamese
      */
     private String buildTranslationPrompt(String japaneseText) {
@@ -124,6 +155,21 @@ public class TranslationService {
                         "Chỉ trả về bản dịch tiếng Việt, không thêm giải thích hay chú thích.\n\n" +
                         "Văn bản tiếng Anh:\n%s",
                 englishText
+        );
+    }
+
+    /**
+     * Build romanization prompt for Japanese to Romaji
+     */
+    private String buildRomanizationPrompt(String japaneseText) {
+        return String.format(
+                "Convert the following Japanese text to Romaji (Roman alphabet). " +
+                        "Use standard Hepburn romanization. " +
+                        "Do not translate the meaning, only convert the pronunciation to Roman letters. " +
+                        "Return only the romanized text without any explanations or notes.\n\n" +
+                        "Japanese text:\n%s\n\n" +
+                        "Romaji:",
+                japaneseText
         );
     }
 
@@ -174,6 +220,17 @@ public class TranslationService {
             story.setDescription(translatedDescription);
             updated = true;
             log.info("Description translated successfully");
+        }
+
+        // Romanize author name if raw author name exists (convert to Romaji, not translate)
+        if (story.getRawAuthorName() != null && !story.getRawAuthorName().trim().isEmpty()) {
+            log.info("Romanizing author name for story ID: {}", storyId);
+            String romanizedAuthorName = romanizeJapanese(story.getRawAuthorName());
+            story.setTranslatedAuthorName(romanizedAuthorName);
+            // Also update the main authorName field for backward compatibility
+            story.setAuthorName(romanizedAuthorName);
+            updated = true;
+            log.info("Author name romanized successfully: {} → {}", story.getRawAuthorName(), romanizedAuthorName);
         }
 
         if (updated) {

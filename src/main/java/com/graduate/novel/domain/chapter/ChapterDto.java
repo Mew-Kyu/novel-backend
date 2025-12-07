@@ -7,6 +7,8 @@ public record ChapterDto(
     Long storyId,
     Integer chapterIndex,
     String title,
+    String rawTitle,
+    String translatedTitle,
     String rawContent,
     String crawlStatus,
     LocalDateTime crawlTime,

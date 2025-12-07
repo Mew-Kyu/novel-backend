@@ -1405,6 +1405,120 @@
 			]
 		},
 		{
+			"name": "Crawl",
+			"item": [
+				{
+					"name": "Crawl Syosetu Novel",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"novelUrl\": \"https://ncode.syosetu.com/n5375cy/\",\n  \"startChapter\": 1,\n  \"endChapter\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/crawl/syosetu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "crawl", "syosetu"]
+						},
+						"description": "Crawl a novel from Syosetu (ncode.syosetu.com). Requires ADMIN or MODERATOR role.\n\n**Request Body:**\n- `novelUrl` (required): Full URL of the novel on Syosetu\n- `startChapter` (optional): Starting chapter number (default: 1)\n- `endChapter` (optional): Ending chapter number (default: 1)\n\n**Features:**\n- Extracts story title, description, and author name\n- Crawls chapter titles and content\n- Stores raw Japanese text in `raw_*` fields\n- Updates existing stories if already crawled\n\n**Example URLs:**\n- https://ncode.syosetu.com/n5375cy/\n- https://ncode.syosetu.com/n9669bk/\n\n**Response:**\n- `storyId`: ID of the created/updated story\n- `title`: Story title\n- `description`: Story description\n- `chaptersCrawled`: Total chapters attempted\n- `chaptersSucceeded`: Successfully crawled chapters\n- `chaptersFailed`: Failed chapters\n- `message`: Summary message"
+					},
+					"response": []
+				},
+				{
+					"name": "Crawl Single Chapter",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"novelUrl\": \"https://ncode.syosetu.com/n5375cy/\",\n  \"startChapter\": 1,\n  \"endChapter\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/crawl/syosetu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "crawl", "syosetu"]
+						},
+						"description": "Crawl a single chapter from Syosetu. Set startChapter and endChapter to the same value."
+					},
+					"response": []
+				},
+				{
+					"name": "Crawl Multiple Chapters",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"novelUrl\": \"https://ncode.syosetu.com/n5375cy/\",\n  \"startChapter\": 1,\n  \"endChapter\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/crawl/syosetu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "crawl", "syosetu"]
+						},
+						"description": "Crawl multiple chapters (1-10) from a Syosetu novel. The service adds polite delays between requests to avoid overloading the server."
+					},
+					"response": []
+				},
+				{
+					"name": "Re-crawl Existing Story",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"novelUrl\": \"https://ncode.syosetu.com/n5375cy/\",\n  \"startChapter\": 11,\n  \"endChapter\": 20\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/crawl/syosetu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "crawl", "syosetu"]
+						},
+						"description": "Re-crawl an existing story to add more chapters or update existing content. If the story URL already exists in the database, it will be updated instead of creating a new story."
+					},
+					"response": []
+				},
+				{
+					"name": "Crawl Service Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/crawl/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "crawl", "health"]
+						},
+						"description": "Check if the crawl service is running"
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "AI Services",
 			"item": [
 				{

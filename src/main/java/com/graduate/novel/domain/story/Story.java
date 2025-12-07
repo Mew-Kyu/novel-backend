@@ -32,6 +32,12 @@ public class Story {
     @Column(name = "author_name", columnDefinition = "TEXT")
     private String authorName;
 
+    @Column(name = "raw_author_name", columnDefinition = "TEXT")
+    private String rawAuthorName;
+
+    @Column(name = "translated_author_name", columnDefinition = "TEXT")
+    private String translatedAuthorName;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

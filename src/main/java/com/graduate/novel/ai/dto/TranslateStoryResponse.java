@@ -13,6 +13,8 @@ public class TranslateStoryResponse {
     private Long storyId;
     private String originalTitle;
     private String translatedTitle;
+    private String originalAuthorName;
+    private String translatedAuthorName;
     private String originalDescription;
     private String translatedDescription;
     private String message;

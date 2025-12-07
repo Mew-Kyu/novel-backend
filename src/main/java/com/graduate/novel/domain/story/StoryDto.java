@@ -8,6 +8,8 @@ public record StoryDto(
     String rawTitle,
     String translatedTitle,
     String authorName,
+    String rawAuthorName,
+    String translatedAuthorName,
     String description,
     String rawDescription,
     String translatedDescription,

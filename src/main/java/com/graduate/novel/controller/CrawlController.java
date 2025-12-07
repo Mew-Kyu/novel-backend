@@ -1,5 +1,8 @@
-package com.graduate.novel.domain.crawl;
+package com.graduate.novel.controller;
 
+import com.graduate.novel.domain.crawl.CrawlNovelRequest;
+import com.graduate.novel.domain.crawl.CrawlNovelResponse;
+import com.graduate.novel.domain.crawl.SyosetuCrawlService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

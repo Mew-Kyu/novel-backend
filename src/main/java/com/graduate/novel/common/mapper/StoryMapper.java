@@ -18,6 +18,8 @@ public interface StoryMapper {
     @Mapping(target = "translatedTitle", ignore = true)
     @Mapping(target = "rawDescription", ignore = true)
     @Mapping(target = "translatedDescription", ignore = true)
+    @Mapping(target = "rawAuthorName", ignore = true)
+    @Mapping(target = "translatedAuthorName", ignore = true)
     @Mapping(target = "genres", ignore = true)
     Story toEntity(CreateStoryRequest request);
 
@@ -28,6 +30,8 @@ public interface StoryMapper {
     @Mapping(target = "translatedTitle", ignore = true)
     @Mapping(target = "rawDescription", ignore = true)
     @Mapping(target = "translatedDescription", ignore = true)
+    @Mapping(target = "rawAuthorName", ignore = true)
+    @Mapping(target = "translatedAuthorName", ignore = true)
     @Mapping(target = "genres", ignore = true)
     void updateEntity(UpdateStoryRequest request, @MappingTarget Story story);
 }
