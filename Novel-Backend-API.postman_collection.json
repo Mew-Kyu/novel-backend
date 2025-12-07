@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "novel-backend-api-collection",
 		"name": "Novel Backend API",
-		"description": "Complete API collection for Novel Backend application",
+		"description": "Complete API collection for Novel Backend application with Role-Based Access Control (RBAC).\n\n## Roles:\n- **ADMIN**: Full access to all features including user/role management\n- **MODERATOR**: Can manage content (stories, chapters, genres) and moderate comments\n- **USER**: Can read content, create comments/ratings, manage own data\n- **PUBLIC**: Read-only access to stories, chapters, genres\n\n## Authentication:\n1. Register or login to get JWT token\n2. Token is automatically saved to collection variables\n3. All authenticated requests use the bearer token\n\n## Admin Endpoints:\n- Require ADMIN role\n- User management: activate/deactivate, assign/remove roles\n- Role management: create, update, delete custom roles\n- Statistics and monitoring\n\n## Testing:\n1. Create users with different roles (USER, MODERATOR, ADMIN)\n2. Login with each role to test different access levels\n3. Admin endpoints are in separate folders",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -32,7 +32,7 @@
 			"name": "Auth",
 			"item": [
 				{
-					"name": "Register",
+					"name": "Register (Default USER Role)",
 					"request": {
 						"auth": {
 							"type": "noauth"
@@ -46,13 +46,40 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Test User\"\n}"
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Regular User\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/auth/register",
 							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "register"]
-						}
+						},
+						"description": "Register a new user with default USER role"
+					},
+					"response": []
+				},
+				{
+					"name": "Register with Specific Role",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\",\n  \"displayName\": \"Admin User\",\n  \"roleName\": \"ADMIN\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						},
+						"description": "Register a new user with a specific role. Available roles: USER, MODERATOR, ADMIN"
 					},
 					"response": []
 				},
@@ -66,6 +93,8 @@
 									"if (pm.response.code === 200) {",
 									"    var jsonData = pm.response.json();",
 									"    pm.collectionVariables.set(\"jwt_token\", jsonData.accessToken);",
+									"    console.log(\"JWT Token saved:\", jsonData.accessToken);",
+									"    console.log(\"User roles:\", jsonData.user.roles);",
 									"}"
 								],
 								"type": "text/javascript"
@@ -85,13 +114,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/auth/login",
 							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "login"]
-						}
+						},
+						"description": "Login and automatically save JWT token to collection variables. Response includes user info with roles."
 					},
 					"response": []
 				}
@@ -1163,6 +1193,212 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "history"]
 						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin - User Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "List all users with their roles (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "1"]
+						},
+						"description": "Get detailed information about a user (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Activate User",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/2/activate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "2", "activate"]
+						},
+						"description": "Activate a user account (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate User",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/2/deactivate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "2", "deactivate"]
+						},
+						"description": "Deactivate a user account (Admin only). Cannot deactivate your own account."
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Role to User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/2/roles/MODERATOR",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "2", "roles", "MODERATOR"]
+						},
+						"description": "Assign a role to a user. Available roles: ADMIN, MODERATOR, USER (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Role from User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/2/roles/MODERATOR",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "2", "roles", "MODERATOR"]
+						},
+						"description": "Remove a role from a user. Cannot remove your own ADMIN role. User must have at least one role. (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/stats/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "stats", "users"]
+						},
+						"description": "Get statistics about users (total, active, inactive) (Admin only)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin - Role Management",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/roles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "roles"]
+						},
+						"description": "Get all available roles (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/roles/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "roles", "1"]
+						},
+						"description": "Get role details by ID (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"CUSTOM_ROLE\",\n  \"description\": \"Custom role description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/roles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "roles"]
+						},
+						"description": "Create a new custom role (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"description\": \"Updated role description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/roles/4",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "roles", "4"]
+						},
+						"description": "Update role description. Cannot update role name. (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/roles/4",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "roles", "4"]
+						},
+						"description": "Delete a custom role. Cannot delete default roles (ADMIN, USER, MODERATOR). (Admin only)"
 					},
 					"response": []
 				}

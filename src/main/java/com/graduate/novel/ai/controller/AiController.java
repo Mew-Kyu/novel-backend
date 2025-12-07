@@ -12,6 +12,7 @@ import com.graduate.novel.common.mapper.StoryMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -33,6 +34,7 @@ public class AiController {
      * Translate text from Japanese to Vietnamese
      */
     @PostMapping("/translate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TranslationResponse> translate(@RequestBody TranslationRequest request) {
         log.info("Received translation request for text of length: {}", request.getText().length());
 
@@ -52,6 +54,7 @@ public class AiController {
      * Auto-translate with language detection
      */
     @PostMapping("/translate/auto")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TranslationResponse> autoTranslate(@RequestBody TranslationRequest request) {
         log.info("Received auto-translation request");
 
@@ -72,6 +75,7 @@ public class AiController {
      * Generate embedding for a specific story
      */
     @PostMapping("/embeddings/story/{storyId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Map<String, String>> generateStoryEmbedding(@PathVariable Long storyId) {
         log.info("Generating embedding for story id: {}", storyId);
 
@@ -88,6 +92,7 @@ public class AiController {
      * Generate embeddings for all stories without embeddings
      */
     @PostMapping("/embeddings/generate-all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Map<String, String>> generateAllEmbeddings() {
         log.info("Starting bulk embedding generation");
 
@@ -107,7 +112,7 @@ public class AiController {
     }
 
     /**
-     * Semantic search for stories
+     * Semantic search for stories (public access)
      */
     @PostMapping("/search/semantic")
     public ResponseEntity<SemanticSearchResponse> semanticSearch(@RequestBody SemanticSearchRequest request) {
@@ -133,6 +138,7 @@ public class AiController {
      * Refresh embedding for a story (useful after updates)
      */
     @PutMapping("/embeddings/story/{storyId}/refresh")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Map<String, String>> refreshStoryEmbedding(@PathVariable Long storyId) {
         log.info("Refreshing embedding for story id: {}", storyId);
 

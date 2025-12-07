@@ -37,7 +37,7 @@ public class SecurityConfig {
                         // Authentication endpoints - no token required
                         .requestMatchers("/api/auth/**").permitAll()
                         // Health check endpoints - no token required
-                        .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health").permitAll()
+                        .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health", "/api/crawl/health").permitAll()
                         // AI semantic search endpoint - no token required
                         .requestMatchers(HttpMethod.POST, "/api/ai/search/semantic").permitAll()
                         // Public genre READ endpoints - no token required (GET only)
@@ -58,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/comments/story/*").permitAll() // GET comments for a story
                         .requestMatchers(HttpMethod.GET, "/api/comments/story/*/count").permitAll() // GET comment count
                         .requestMatchers(HttpMethod.GET, "/api/comments/*").permitAll() // GET single comment
+                        // Admin endpoints require ADMIN role (handled by @PreAuthorize, but adding explicit rule for clarity)
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
                 )

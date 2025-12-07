@@ -9,6 +9,7 @@ import com.graduate.novel.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,8 +50,9 @@ public class RatingService {
         Rating rating = ratingRepository.findById(ratingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rating not found with id: " + ratingId));
 
+        // Only the owner can update their rating (no moderator override)
         if (!rating.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("You can only update your own ratings");
+            throw new AccessDeniedException("You can only update your own ratings");
         }
 
         rating.setRating(request.rating());
@@ -64,8 +66,9 @@ public class RatingService {
         Rating rating = ratingRepository.findById(ratingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rating not found with id: " + ratingId));
 
+        // Only the owner can delete their rating (no moderator override)
         if (!rating.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("You can only delete your own ratings");
+            throw new AccessDeniedException("You can only delete your own ratings");
         }
 
         ratingRepository.delete(rating);

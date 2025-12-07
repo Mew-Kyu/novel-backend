@@ -2,19 +2,27 @@ package com.graduate.novel.domain.user;
 
 import com.graduate.novel.common.exception.BadRequestException;
 import com.graduate.novel.common.mapper.UserMapper;
+import com.graduate.novel.domain.role.Role;
+import com.graduate.novel.domain.role.RoleRepository;
 import com.graduate.novel.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -26,13 +34,27 @@ public class AuthService {
             throw new BadRequestException("Email already exists");
         }
 
+        // Determine which role to assign (default to USER)
+        String roleName = (request.roleName() != null && !request.roleName().isBlank())
+                ? request.roleName().toUpperCase()
+                : Role.USER;
+
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new BadRequestException("Role not found: " + roleName));
+
+        Set<Role> roles = new HashSet<>();
+        roles.add(role);
+
         User user = User.builder()
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .displayName(request.displayName())
+                .active(true)
+                .roles(roles)
                 .build();
 
         user = userRepository.save(user);
+        log.info("User registered successfully: {} with role: {}", user.getEmail(), roleName);
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -51,6 +73,12 @@ public class AuthService {
 
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BadRequestException("User not found"));
+
+        if (!user.isEnabled()) {
+            throw new BadRequestException("User account is deactivated");
+        }
+
+        log.info("User logged in successfully: {}", user.getEmail());
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);

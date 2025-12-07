@@ -15,5 +15,8 @@ public record RegisterRequest(
 
     @NotBlank(message = "Display name is required")
     @Size(min = 1, max = 255, message = "Display name must be between 1 and 255 characters")
-    String displayName
+    String displayName,
+
+    // Optional role name, defaults to USER if not specified
+    String roleName
 ) {}

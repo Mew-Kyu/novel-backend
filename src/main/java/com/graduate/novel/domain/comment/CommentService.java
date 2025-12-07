@@ -2,6 +2,7 @@ package com.graduate.novel.domain.comment;
 
 import com.graduate.novel.common.exception.ResourceNotFoundException;
 import com.graduate.novel.common.mapper.CommentMapper;
+import com.graduate.novel.domain.role.Role;
 import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import com.graduate.novel.domain.user.User;
@@ -9,6 +10,7 @@ import com.graduate.novel.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,8 +46,12 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + commentId));
 
-        if (!comment.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("You can only update your own comments");
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Allow update if user owns the comment OR user is ADMIN/MODERATOR
+        if (!comment.getUser().getId().equals(userId) && !hasModeratorAccess(user)) {
+            throw new AccessDeniedException("You can only update your own comments");
         }
 
         comment.setContent(request.content());
@@ -59,11 +65,22 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with id: " + commentId));
 
-        if (!comment.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("You can only delete your own comments");
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Allow deletion if user owns the comment OR user is ADMIN/MODERATOR
+        if (!comment.getUser().getId().equals(userId) && !hasModeratorAccess(user)) {
+            throw new AccessDeniedException("You can only delete your own comments");
         }
 
         commentRepository.delete(comment);
+    }
+
+    /**
+     * Check if user has ADMIN or MODERATOR role
+     */
+    private boolean hasModeratorAccess(User user) {
+        return user.hasRole(Role.ADMIN) || user.hasRole(Role.MODERATOR);
     }
 
     @Transactional(readOnly = true)

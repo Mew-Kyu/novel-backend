@@ -5,7 +5,11 @@ import com.graduate.novel.domain.user.UserDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+import java.util.List;
+
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {RoleMapper.class})
 public interface UserMapper {
     UserDto toDto(User user);
+
+    List<UserDto> toDtoList(List<User> users);
 }

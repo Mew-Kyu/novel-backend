@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -49,12 +50,14 @@ public class StoryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<StoryDto> createStory(@Valid @RequestBody CreateStoryRequest request) {
         StoryDto story = storyService.createStory(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(story);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<StoryDto> updateStory(
             @PathVariable Long id,
             @Valid @RequestBody UpdateStoryRequest request
@@ -64,6 +67,7 @@ public class StoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<Void> deleteStory(@PathVariable Long id) {
         storyService.deleteStory(id);
         return ResponseEntity.noContent().build();
@@ -73,6 +77,7 @@ public class StoryController {
      * Translate story title and/or description
      */
     @PostMapping("/translate/story")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TranslateStoryResponse> translateStory(@RequestBody TranslateStoryRequest request) {
         log.info("Translating story id: {} (title: {}, description: {})",
                 request.getStoryId(), request.getTranslateTitle(), request.getTranslateDescription());
@@ -99,6 +104,7 @@ public class StoryController {
      * Translate story title and description by story ID (translate both by default)
      */
     @PostMapping("/translate/story/{storyId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<TranslateStoryResponse> translateStoryById(@PathVariable Long storyId) {
         log.info("Translating story id: {} (both title and description)", storyId);
 

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,6 +22,7 @@ public class CrawlController {
      * @return CrawlNovelResponse with crawl results
      */
     @PostMapping("/syosetu")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
     public ResponseEntity<CrawlNovelResponse> crawlSyosetuNovel(
             @Valid @RequestBody CrawlNovelRequest request) {
 
