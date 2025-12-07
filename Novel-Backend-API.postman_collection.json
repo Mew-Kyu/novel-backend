@@ -473,7 +473,8 @@
 							"raw": "{{base_url}}/api/stories/translate/story",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "translate", "story"]
-						}
+						},
+						"description": "Translate story title and/or description from Japanese to Vietnamese.\n\n**✨ NEW: Also romanizes author name automatically!**\n\n**Request Body:**\n- `storyId` (required): ID of the story to translate\n- `translateTitle` (optional): Translate title (default: true)\n- `translateDescription` (optional): Translate description (default: true)\n\n**What Gets Translated:**\n- Title: `rawTitle` → `translatedTitle` (Japanese → Vietnamese)\n- Description: `rawDescription` → `translatedDescription` (Japanese → Vietnamese)\n- **Author Name: `rawAuthorName` → `translatedAuthorName` (Japanese → Romaji)** ← NEW!\n\n**Note about Author Name:**\n- Author name is ROMANIZED (converted to Romaji), NOT translated\n- Example: \"錬金王\" → \"Renkinō\" (not \"Vua Giả Kim\")\n- This preserves the author's name while making it readable\n\n**Response includes:**\n- `storyId`: ID of translated story\n- `originalTitle`: Raw Japanese title\n- `translatedTitle`: Vietnamese title\n- `originalAuthorName`: Raw Japanese author name (NEW!)\n- `translatedAuthorName`: Romanized author name (NEW!)\n- `originalDescription`: Raw Japanese description\n- `translatedDescription`: Vietnamese description\n- `message`: Success message\n\n**Example Response:**\n```json\n{\n  \"storyId\": 3,\n  \"originalTitle\": \"転生～運命の書き換え～\",\n  \"translatedTitle\": \"Chuyển Sinh ～Viết Lại Số Phận～\",\n  \"originalAuthorName\": \"錬金王\",\n  \"translatedAuthorName\": \"Renkinō\",\n  \"originalDescription\": \"...\",\n  \"translatedDescription\": \"...\",\n  \"message\": \"Story translated successfully\"\n}\n```"
 					},
 					"response": []
 				},
@@ -486,7 +487,8 @@
 							"raw": "{{base_url}}/api/stories/translate/story/1",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "translate", "story", "1"]
-						}
+						},
+						"description": "Translate story by ID (simplified version). Translates both title and description by default.\n\n**✨ NEW: Also romanizes author name automatically!**\n\n**What Gets Translated:**\n- Title: Japanese → Vietnamese\n- Description: Japanese → Vietnamese\n- **Author Name: Japanese → Romaji (NEW!)**\n\n**Response includes author name fields:**\n- `originalAuthorName`: e.g., \"錬金王\"\n- `translatedAuthorName`: e.g., \"Renkinō\""
 					},
 					"response": []
 				}
@@ -681,7 +683,8 @@
 							"raw": "{{base_url}}/api/stories/1/chapters/1/translate",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "1", "chapters", "1", "translate"]
-						}
+						},
+						"description": "Translate a single chapter from Japanese to Vietnamese.\n\n**✨ NEW: Also translates chapter title automatically!**\n\n**Important:** Use the chapter's database ID, not the chapter index!\n- Example: If chapter 3 has ID=8, use `/chapters/8/translate` not `/chapters/3/translate`\n- Get correct IDs via: `GET /api/stories/{storyId}/chapters`\n\n**What Gets Translated:**\n- **Chapter Title: `rawTitle` → `translatedTitle` (NEW!)**\n  - Example: \"プロローグ\" → \"Lời Mở Đầu\"\n- Chapter Content: `rawContent` → `translatedContent`\n  - Full chapter text from Japanese to Vietnamese\n\n**Response includes:**\n```json\n{\n  \"id\": 8,\n  \"storyId\": 3,\n  \"chapterIndex\": 3,\n  \"title\": \"第二話「ステータス」\",\n  \"rawTitle\": \"第二話「ステータス」\",\n  \"translatedTitle\": \"Chương 2: Trạng Thái\",\n  \"rawContent\": \"...\",\n  \"translatedContent\": \"...\",\n  \"translateStatus\": \"SUCCESS\"\n}\n```\n\n**To find correct chapter ID:**\n1. `GET /api/stories/{storyId}/chapters` - Get all chapters\n2. Find chapter with desired `chapterIndex`\n3. Use its `id` field (not `chapterIndex`) in translate URL"
 					},
 					"response": []
 				},
@@ -694,7 +697,8 @@
 							"raw": "{{base_url}}/api/stories/1/chapters/translate-all",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "1", "chapters", "translate-all"]
-						}
+						},
+						"description": "Translate all untranslated chapters of a story.\n\n**✨ NEW: Translates both chapter titles and content!**\n\n**What Gets Translated:**\n- All chapter titles (rawTitle → translatedTitle)\n- All chapter content (rawContent → translatedContent)\n- Only processes chapters with `translateStatus: NONE`\n\n**Features:**\n- Automatic delay between chapters to avoid rate limiting\n- Updates each chapter's `translateStatus` to SUCCESS/FAILED\n- Continues even if some chapters fail\n\n**Response:**\n```json\n{\n  \"message\": \"Translation completed for story {storyId}\"\n}\n```\n\n**Check progress:**\n- `GET /api/stories/{storyId}/chapters` - See translateStatus for each chapter"
 					},
 					"response": []
 				},
@@ -707,7 +711,8 @@
 							"raw": "{{base_url}}/api/stories/1/chapters/retry-failed-translations",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "1", "chapters", "retry-failed-translations"]
-						}
+						},
+						"description": "Retry translating chapters that previously failed.\n\n**What it does:**\n- Finds all chapters with `translateStatus: FAILED`\n- Attempts to translate them again (title + content)\n- Updates status based on result\n\n**Use case:** If translation failed due to rate limiting or temporary API issues, this retries those chapters."
 					},
 					"response": []
 				}
@@ -1426,7 +1431,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "crawl", "syosetu"]
 						},
-						"description": "Crawl a novel from Syosetu (ncode.syosetu.com). Requires ADMIN or MODERATOR role.\n\n**Request Body:**\n- `novelUrl` (required): Full URL of the novel on Syosetu\n- `startChapter` (optional): Starting chapter number (default: 1)\n- `endChapter` (optional): Ending chapter number (default: 1)\n\n**Features:**\n- Extracts story title, description, and author name\n- Crawls chapter titles and content\n- Stores raw Japanese text in `raw_*` fields\n- Updates existing stories if already crawled\n\n**Example URLs:**\n- https://ncode.syosetu.com/n5375cy/\n- https://ncode.syosetu.com/n9669bk/\n\n**Response:**\n- `storyId`: ID of the created/updated story\n- `title`: Story title\n- `description`: Story description\n- `chaptersCrawled`: Total chapters attempted\n- `chaptersSucceeded`: Successfully crawled chapters\n- `chaptersFailed`: Failed chapters\n- `message`: Summary message"
+						"description": "Crawl a novel from Syosetu (ncode.syosetu.com). Requires ADMIN or MODERATOR role.\n\n**Request Body:**\n- `novelUrl` (required): Full URL of the novel on Syosetu\n- `startChapter` (optional): Starting chapter number (default: 1)\n- `endChapter` (optional): Ending chapter number (default: 1)\n\n**✨ NEW Features (Updated Dec 2025):**\n- ✅ Extracts author name (e.g., \"錬金王\") and stores in `rawAuthorName`\n- ✅ Extracts actual chapter titles (e.g., \"プロローグ\", \"第一話\") instead of generic \"Chapter 1\"\n- ✅ Automatically creates CrawlJob for tracking (check via GET /api/jobs)\n- ✅ Stores raw Japanese text in `raw_*` fields for later translation\n- ✅ Updates existing stories if URL already crawled\n\n**What Gets Crawled:**\n- Story title → `rawTitle`\n- Story description → `rawDescription`  \n- Author name → `rawAuthorName` (NEW!)\n- Chapter titles → `rawTitle` per chapter (NEW!)\n- Chapter content → `rawContent` per chapter\n\n**Example URLs:**\n- https://ncode.syosetu.com/n5375cy/ (Author: 錬金王)\n- https://ncode.syosetu.com/n9669bk/ (Chapters: プロローグ, 第一話, etc.)\n\n**Response:**\n- `storyId`: ID of the created/updated story\n- `title`: Story title\n- `description`: Story description\n- `chaptersCrawled`: Total chapters attempted\n- `chaptersSucceeded`: Successfully crawled chapters\n- `chaptersFailed`: Failed chapters\n- `message`: Summary message\n\n**After Crawling:**\n1. Check crawl job: `GET /api/jobs` or `GET /api/jobs/by-story/{storyId}`\n2. Translate story: `POST /api/stories/translate/story/{storyId}` (translates title, desc, romanizes author)\n3. Translate chapters: `POST /api/stories/{storyId}/chapters/{chapterId}/translate` (translates title + content)"
 					},
 					"response": []
 				},

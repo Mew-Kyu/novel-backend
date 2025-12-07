@@ -3,6 +3,8 @@ package com.graduate.novel.domain.crawl;
 import com.graduate.novel.common.exception.BadRequestException;
 import com.graduate.novel.domain.chapter.Chapter;
 import com.graduate.novel.domain.chapter.ChapterRepository;
+import com.graduate.novel.domain.crawljob.CrawlJobService;
+import com.graduate.novel.domain.crawljob.CreateCrawlJobRequest;
 import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class SyosetuCrawlService {
 
     private final StoryRepository storyRepository;
     private final ChapterRepository chapterRepository;
+    private final CrawlJobService crawlJobService;
 
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     private static final int MIN_DELAY_MS = 1000;
@@ -47,6 +50,9 @@ public class SyosetuCrawlService {
         String novelCode = extractNovelCode(request.getNovelUrl());
         String baseUrl = "https://ncode.syosetu.com/" + novelCode + "/";
 
+        Long jobId = null;
+        Story story = null;
+
         try {
             // Step 1: Crawl main page to get title and description
             Document mainPage = fetchDocument(baseUrl);
@@ -58,7 +64,7 @@ public class SyosetuCrawlService {
                     title, authorName, description != null ? description.length() : 0);
 
             // Step 2: Save or update story
-            Story story = saveOrUpdateStory(baseUrl, title, description, authorName);
+            story = saveOrUpdateStory(baseUrl, title, description, authorName);
 
             // Step 3: Determine chapter range
             int startChapter = request.getStartChapter() != null ? request.getStartChapter() : 1;
@@ -68,7 +74,17 @@ public class SyosetuCrawlService {
                 throw new BadRequestException("End chapter must be greater than or equal to start chapter");
             }
 
-            log.info("Crawling chapters {} to {} for story ID: {}", startChapter, endChapter, story.getId());
+            // Create crawl job for tracking
+            CreateCrawlJobRequest jobRequest = new CreateCrawlJobRequest(
+                    story.getId(),
+                    null, // no specific chapter for story-level crawl
+                    "STORY_CRAWL"
+            );
+            var jobDto = crawlJobService.createJob(jobRequest);
+            jobId = jobDto.id();
+            log.info("Created crawl job with jobId={} for storyId={}", jobId, story.getId());
+
+            log.info("Crawling chapters {} to {} for storyId={}", startChapter, endChapter, story.getId());
 
             // Step 4: Crawl chapters
             int succeeded = 0;
@@ -97,6 +113,10 @@ public class SyosetuCrawlService {
 
             int totalCrawled = endChapter - startChapter + 1;
 
+            // Update job status to SUCCESS
+            crawlJobService.updateJobStatus(jobId, "SUCCESS", null);
+            log.info("✅ Crawl job {} completed successfully", jobId);
+
             return CrawlNovelResponse.builder()
                     .storyId(story.getId())
                     .title(story.getTitle())
@@ -109,7 +129,14 @@ public class SyosetuCrawlService {
                     .build();
 
         } catch (Exception e) {
-            log.error("Error during novel crawl: {}", e.getMessage(), e);
+            log.error("❌ Error during novel crawl: {}", e.getMessage(), e);
+
+            // Update job status to FAILED if job was created
+            if (jobId != null) {
+                crawlJobService.updateJobStatus(jobId, "FAILED", e.getMessage());
+                log.error("Crawl job {} marked as FAILED", jobId);
+            }
+
             throw new BadRequestException("Failed to crawl novel: " + e.getMessage());
         }
     }
