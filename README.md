@@ -68,6 +68,12 @@ The application implements role-based access control with three predefined roles
 | POST /api/ratings | ❌ | ✅ | ✅ | ✅ |
 | PUT /api/ratings/{id} | ❌ | Owner | Owner | Owner |
 | DELETE /api/ratings/{id} | ❌ | Owner | Owner | Owner |
+| **Favorites** |
+| GET /api/favorites | ❌ | ✅ | ✅ | ✅ |
+| POST /api/favorites/{storyId} | ❌ | ✅ | ✅ | ✅ |
+| DELETE /api/favorites/{storyId} | ❌ | ✅ | ✅ | ✅ |
+| GET /api/favorites/check/{storyId} | ❌ | ✅ | ✅ | ✅ |
+| GET /api/favorites/count/{storyId} | ✅ | ✅ | ✅ | ✅ |
 | **Crawl Jobs** |
 | All /api/jobs/** | ❌ | ❌ | ✅ | ✅ |
 | POST /api/crawl/syosetu | ❌ | ❌ | ✅ | ✅ |

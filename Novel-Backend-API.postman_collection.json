@@ -1204,6 +1204,94 @@
 			]
 		},
 		{
+			"name": "Favorites",
+			"item": [
+				{
+					"name": "Get My Favorites",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/favorites?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all favorite stories for the current user (USER role required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Add to Favorites",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites", "1"]
+						},
+						"description": "Add a story to favorites. Replace '1' with the story ID (USER role required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove from Favorites",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites", "1"]
+						},
+						"description": "Remove a story from favorites. Replace '1' with the story ID (USER role required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Favorite Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/check/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites", "check", "1"]
+						},
+						"description": "Check if a story is in user's favorites and get total favorite count (USER role required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Favorite Count (Public)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/favorites/count/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "favorites", "count", "1"]
+						},
+						"description": "Get the total number of users who favorited a story (No authentication required)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Admin - User Management",
 			"item": [
 				{
