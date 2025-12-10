@@ -2,6 +2,7 @@ package com.graduate.novel.domain.genre;
 
 import com.graduate.novel.common.exception.ResourceNotFoundException;
 import com.graduate.novel.common.mapper.GenreMapper;
+import com.graduate.novel.domain.story.StoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,11 +16,28 @@ public class GenreService {
 
     private final GenreRepository genreRepository;
     private final GenreMapper genreMapper;
+    private final StoryRepository storyRepository;
 
     @Transactional(readOnly = true)
     public List<GenreDto> getAllGenres() {
         return genreRepository.findAll().stream()
                 .map(genreMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get all genres with story counts
+     */
+    @Transactional(readOnly = true)
+    public List<GenreDetailDto> getAllGenresWithCounts() {
+        return genreRepository.findAll().stream()
+                .map(genre -> new GenreDetailDto(
+                        genre.getId(),
+                        genre.getName(),
+                        genre.getDescription(),
+                        storyRepository.countByGenreId(genre.getId()),
+                        genre.getCreatedAt()
+                ))
                 .collect(Collectors.toList());
     }
 

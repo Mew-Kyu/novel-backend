@@ -8,11 +8,13 @@ import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -298,5 +300,28 @@ public class ChapterService {
                 chapterRepository.save(chapter);
             }
         }
+    }
+
+    // ========== Homepage Features ==========
+
+    /**
+     * Get latest chapters across all stories
+     */
+    @Transactional(readOnly = true)
+    public List<LatestChapterDto> getLatestChapters(int limit) {
+        List<Chapter> chapters = chapterRepository.findLatestChapters(PageRequest.of(0, limit));
+
+        return chapters.stream()
+                .map(chapter -> new LatestChapterDto(
+                        chapter.getId(),
+                        chapter.getStory().getId(),
+                        chapter.getStory().getTitle(),
+                        chapter.getStory().getTranslatedTitle(),
+                        chapter.getChapterIndex(),
+                        chapter.getTitle(),
+                        chapter.getTranslatedTitle(),
+                        chapter.getUpdatedAt()
+                ))
+                .collect(Collectors.toList());
     }
 }

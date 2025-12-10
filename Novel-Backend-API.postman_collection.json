@@ -1739,6 +1739,204 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Homepage Features",
+			"item": [
+				{
+					"name": "Get Stories with Metadata",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/with-metadata?page=0&size=20&sort=createdAt,desc",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "with-metadata"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "sort",
+									"value": "createdAt,desc",
+									"description": "Options: createdAt,desc | updatedAt,desc | viewCount,desc"
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true,
+									"description": "Search keyword"
+								},
+								{
+									"key": "genreId",
+									"value": "",
+									"disabled": true,
+									"description": "Filter by genre ID"
+								}
+							]
+						},
+						"description": "Get stories with full metadata (rating, comments, favorites, totalChapters, latestChapter).\n\nThis endpoint replaces the need to call multiple APIs for each story.\n\nResponse includes:\n- viewCount, featured, totalChapters\n- averageRating, totalRatings\n- totalComments, totalFavorites\n- genres array\n- latestChapter object\n\n✨ Performance: 1 request instead of 81 requests!"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Featured Stories",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/featured?limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "featured"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Number of featured stories to return"
+								}
+							]
+						},
+						"description": "Get featured stories for homepage hero section.\n\nOnly returns stories where `featured = true`.\nAdmin can set featured status via PATCH /api/stories/{id}/featured\n\nUse case:\n- Homepage hero/banner section\n- Featured carousel\n- Editor's picks\n\nReturns: Array of StoryDetailDto with full metadata"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trending Stories",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/trending?limit=10&days=7",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "trending"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of trending stories"
+								},
+								{
+									"key": "days",
+									"value": "7",
+									"description": "Time period (days)"
+								}
+							]
+						},
+						"description": "Get trending stories based on recent updates and view count.\n\nLogic: Stories updated in last N days, sorted by viewCount DESC.\n\nUse cases:\n- days=7: Trending this week\n- days=30: Trending this month\n- days=1: Trending today\n\nReturns: Array of StoryDetailDto with full metadata"
+					},
+					"response": []
+				},
+				{
+					"name": "Increment View Count",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/view",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "view"]
+						},
+						"description": "Increment view count for a story.\n\nCall this endpoint when:\n- User opens a story detail page\n- User starts reading a chapter\n\nNo authentication required.\n\nReturns: 200 OK (no body)\n\nNote: Consider rate limiting in production to prevent abuse."
+					},
+					"response": []
+				},
+				{
+					"name": "Set Featured Status (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/featured?featured=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "featured"],
+							"query": [
+								{
+									"key": "featured",
+									"value": "true",
+									"description": "true or false"
+								}
+							]
+						},
+						"description": "Set featured status for a story (Admin only).\n\nFeatured stories appear in the homepage hero section via GET /api/stories/featured\n\nBest practice: Feature 3-5 high-quality stories.\n\nRequires: ADMIN role\n\nReturns: StoryDto with updated featured status"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Genres with Story Counts",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/genres/with-counts",
+							"host": ["{{base_url}}"],
+							"path": ["api", "genres", "with-counts"]
+						},
+						"description": "Get all genres with story counts.\n\nUseful for:\n- Homepage genre browser\n- Genre filter with counts\n- Analytics\n\nResponse includes:\n- id, name, description\n- storyCount (number of stories in genre)\n- createdAt\n\nExample response:\n```json\n[\n  {\n    \"id\": 1,\n    \"name\": \"Fantasy\",\n    \"description\": \"Fantasy genre\",\n    \"storyCount\": 250,\n    \"createdAt\": \"2025-01-01T00:00:00\"\n  }\n]\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Latest Chapters (Cross-Story)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/chapters/latest?limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "chapters", "latest"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Number of latest chapters"
+								}
+							]
+						},
+						"description": "Get latest chapter updates across all stories.\n\nUseful for:\n- Homepage 'Latest Updates' section\n- Activity feed\n- Recent releases\n\nResponse includes:\n- Chapter info (id, index, title, translatedTitle)\n- Story info (id, title, translatedTitle)\n- updatedAt timestamp\n\nSorted by: updatedAt DESC\n\nExample response:\n```json\n[\n  {\n    \"id\": 150,\n    \"storyId\": 1,\n    \"storyTitle\": \"Story Title\",\n    \"storyTranslatedTitle\": \"Translated Title\",\n    \"chapterIndex\": 150,\n    \"title\": \"Chapter 150\",\n    \"translatedTitle\": \"Chương 150\",\n    \"updatedAt\": \"2025-12-10T15:30:00\"\n  }\n]\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Platform Statistics",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stats/summary",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stats", "summary"]
+						},
+						"description": "Get platform statistics summary.\n\nNo authentication required.\n\nResponse:\n```json\n{\n  \"totalStories\": 1250,\n  \"totalGenres\": 15,\n  \"totalChapters\": 45000,\n  \"totalUsers\": 3500,\n  \"totalViews\": 125000\n}\n```\n\nUseful for:\n- Homepage statistics bar\n- About page\n- Admin dashboard\n- Marketing materials"
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }

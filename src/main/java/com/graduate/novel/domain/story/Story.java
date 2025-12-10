@@ -75,12 +75,35 @@ public class Story {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "view_count")
+    @Builder.Default
+    private Long viewCount = 0L;
+
+    @Column(name = "featured")
+    @Builder.Default
+    private Boolean featured = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
         if (sourceSite == null) {
             sourceSite = "syosetu";
         }
+        if (viewCount == null) {
+            viewCount = 0L;
+        }
+        if (featured == null) {
+            featured = false;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }
 

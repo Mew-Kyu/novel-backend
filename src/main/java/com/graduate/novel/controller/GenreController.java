@@ -1,6 +1,7 @@
 package com.graduate.novel.controller;
 
 import com.graduate.novel.domain.genre.CreateGenreRequest;
+import com.graduate.novel.domain.genre.GenreDetailDto;
 import com.graduate.novel.domain.genre.GenreDto;
 import com.graduate.novel.domain.genre.GenreService;
 import com.graduate.novel.domain.genre.UpdateGenreRequest;
@@ -23,6 +24,15 @@ public class GenreController {
     @GetMapping
     public ResponseEntity<List<GenreDto>> getAllGenres() {
         List<GenreDto> genres = genreService.getAllGenres();
+        return ResponseEntity.ok(genres);
+    }
+
+    /**
+     * Get all genres with story counts
+     */
+    @GetMapping("/with-counts")
+    public ResponseEntity<List<GenreDetailDto>> getAllGenresWithCounts() {
+        List<GenreDetailDto> genres = genreService.getAllGenresWithCounts();
         return ResponseEntity.ok(genres);
     }
 

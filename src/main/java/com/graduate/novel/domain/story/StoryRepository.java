@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -43,4 +44,27 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
             "LIMIT :limit", nativeQuery = true)
     List<Story> findBySimilarity(@Param("queryEmbedding") String queryEmbedding,
                                   @Param("limit") int limit);
+
+    // Homepage features
+
+    // Find featured stories
+    @Query("SELECT s FROM Story s WHERE s.featured = true ORDER BY s.updatedAt DESC")
+    Page<Story> findFeaturedStories(Pageable pageable);
+
+    // Find trending stories (updated recently with high view count)
+    @Query("SELECT s FROM Story s WHERE s.updatedAt >= :since ORDER BY s.viewCount DESC, s.updatedAt DESC")
+    Page<Story> findTrendingStories(@Param("since") LocalDateTime since, Pageable pageable);
+
+    // Increment view count
+    @Modifying
+    @Query("UPDATE Story s SET s.viewCount = s.viewCount + 1 WHERE s.id = :storyId")
+    void incrementViewCount(@Param("storyId") Long storyId);
+
+    // Count stories by genre
+    @Query("SELECT COUNT(DISTINCT s) FROM Story s JOIN s.genres g WHERE g.id = :genreId")
+    Long countByGenreId(@Param("genreId") Long genreId);
+
+    // Total view count
+    @Query("SELECT COALESCE(SUM(s.viewCount), 0) FROM Story s")
+    Long getTotalViewCount();
 }
