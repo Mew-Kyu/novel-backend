@@ -15,7 +15,17 @@
 http://localhost:8080/swagger-ui.html
 ```
 
-**📖 Xem hướng dẫn đầy đủ:** [QUICK_START_VIETNAM.md](QUICK_START_VIETNAM.md)
+### 🎨 Framework Support
+Generated code hoạt động với **TẤT CẢ frameworks**:
+- ✅ **React** (CRA, Vite, Next.js) - Có sẵn hooks
+- ✅ **Vue 3** - Dùng với Composition API
+- ✅ **Angular** - Wrap trong Services
+- ✅ **Svelte, Solid, Qwik** - Dùng trực tiếp
+- ✅ **Vanilla TypeScript** - Bất kỳ framework nào
+
+**📖 Xem chi tiết:**
+- [QUICK_START_VIETNAM.md](QUICK_START_VIETNAM.md) - Full examples cho mọi framework
+- [FRAMEWORK_COMPATIBILITY.md](FRAMEWORK_COMPATIBILITY.md) - Framework compatibility guide
 
 ---
 

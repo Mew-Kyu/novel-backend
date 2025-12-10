@@ -38,6 +38,13 @@ Script tự động generate:
 - ✅ React hooks (useApi, useMutation)
 - ✅ README với examples
 
+**Framework Support:**
+- ✅ **React** (Create React App, Vite)
+- ✅ **Next.js** (App Router & Pages Router)
+- ✅ **Vue 3** (Composition API)
+- ✅ **Angular** (Standalone Components)
+- ✅ **Vanilla TypeScript** (Bất kỳ framework nào)
+
 **Ưu điểm:**
 - Chạy cực nhanh (< 5 giây)
 - Không cần backend chạy
@@ -417,6 +424,418 @@ apiClient.interceptors.request.use(config => {
 // Add retry logic
 // Add request caching
 // etc...
+```
+
+---
+
+## 🎨 Framework-Specific Examples
+
+Generated code **hỗ trợ MỌI framework TypeScript/JavaScript**. Dưới đây là examples cho các framework phổ biến:
+
+### ⚛️ React (Create React App / Vite)
+
+**Setup:**
+```bash
+npm install axios
+# Optional but recommended:
+npm install @tanstack/react-query
+```
+
+**Basic với hooks có sẵn:**
+```tsx
+import { useApi, useMutation } from './api/hooks';
+import { apiClient } from './api/client';
+
+function StoriesList() {
+  const { data, loading, error, refetch } = useApi(
+    () => apiClient.get('/api/stories'),
+    { immediate: true }
+  );
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error!</div>;
+
+  return (
+    <div>
+      <button onClick={refetch}>Refresh</button>
+      {data?.map(story => (
+        <div key={story.id}>{story.title}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Với React Query (Khuyên dùng cho app lớn):**
+```tsx
+import { QueryClient, QueryClientProvider, useQuery, useMutation } from '@tanstack/react-query';
+import { apiClient } from './api/client';
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <StoriesList />
+    </QueryClientProvider>
+  );
+}
+
+function StoriesList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['stories'],
+    queryFn: () => apiClient.get('/api/stories')
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => apiClient.post('/api/stories', data),
+    onSuccess: () => queryClient.invalidateQueries(['stories'])
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return <div>{JSON.stringify(data)}</div>;
+}
+```
+
+---
+
+### 🔷 Next.js 13+ (App Router)
+
+**Server Component (Khuyên dùng):**
+```tsx
+// app/stories/page.tsx
+async function getStories() {
+  const response = await fetch('http://localhost:8080/api/stories', {
+    cache: 'no-store', // hoặc 'force-cache' để cache
+    next: { revalidate: 60 } // ISR: revalidate mỗi 60 giây
+  });
+  return response.json();
+}
+
+export default async function StoriesPage() {
+  const stories = await getStories();
+
+  return (
+    <div>
+      <h1>Stories</h1>
+      {stories.map(story => (
+        <div key={story.id}>
+          <h2>{story.title}</h2>
+          <p>{story.description}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Client Component:**
+```tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { apiClient } from '@/api/client';
+
+export default function StoriesList() {
+  const [stories, setStories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiClient.get('/api/stories')
+      .then(setStories)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  return <div>{JSON.stringify(stories)}</div>;
+}
+```
+
+**API Route Handler:**
+```typescript
+// app/api/stories/route.ts
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  const response = await fetch('http://localhost:8080/api/stories');
+  const data = await response.json();
+  return NextResponse.json(data);
+}
+
+export async function POST(request: Request) {
+  const body = await request.json();
+  const response = await fetch('http://localhost:8080/api/stories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return NextResponse.json(await response.json());
+}
+```
+
+**Environment Variables:**
+```env
+# .env.local
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+```typescript
+// Update api/client.ts
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+```
+
+---
+
+### 🔷 Next.js (Pages Router)
+
+**getServerSideProps:**
+```tsx
+// pages/stories/index.tsx
+import { GetServerSideProps } from 'next';
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const response = await fetch('http://localhost:8080/api/stories');
+  const stories = await response.json();
+
+  return {
+    props: { stories }
+  };
+};
+
+export default function StoriesPage({ stories }) {
+  return (
+    <div>
+      {stories.map(story => (
+        <div key={story.id}>{story.title}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+**getStaticProps (SSG):**
+```tsx
+export const getStaticProps: GetStaticProps = async () => {
+  const response = await fetch('http://localhost:8080/api/stories');
+  const stories = await response.json();
+
+  return {
+    props: { stories },
+    revalidate: 60 // ISR
+  };
+};
+```
+
+---
+
+### 💚 Vue 3 (Composition API)
+
+**Setup:**
+```bash
+npm install axios
+npm install pinia  # Optional: state management
+```
+
+**Composable:**
+```typescript
+// composables/useApi.ts
+import { ref, onMounted } from 'vue';
+import { apiClient } from '@/api/client';
+
+export function useApi<T>(apiFunc: () => Promise<T>, immediate = true) {
+  const data = ref<T | null>(null);
+  const loading = ref(false);
+  const error = ref<any>(null);
+
+  const execute = async () => {
+    loading.value = true;
+    error.value = null;
+    try {
+      data.value = await apiFunc();
+    } catch (err) {
+      error.value = err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  if (immediate) {
+    onMounted(execute);
+  }
+
+  return { data, loading, error, execute };
+}
+```
+
+**Component:**
+```vue
+<template>
+  <div>
+    <div v-if="loading">Loading...</div>
+    <div v-else-if="error">Error: {{ error.message }}</div>
+    <div v-else>
+      <div v-for="story in data" :key="story.id">
+        <h3>{{ story.title }}</h3>
+        <p>{{ story.description }}</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useApi } from '@/composables/useApi';
+import { apiClient } from '@/api/client';
+
+const { data, loading, error } = useApi(
+  () => apiClient.get('/api/stories'),
+  true
+);
+</script>
+```
+
+**Với Pinia Store:**
+```typescript
+// stores/stories.ts
+import { defineStore } from 'pinia';
+import { apiClient } from '@/api/client';
+
+export const useStoriesStore = defineStore('stories', {
+  state: () => ({
+    stories: [],
+    loading: false
+  }),
+  actions: {
+    async fetchStories() {
+      this.loading = true;
+      try {
+        this.stories = await apiClient.get('/api/stories');
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
+});
+```
+
+---
+
+### 🅰️ Angular (Standalone Components)
+
+**Setup:**
+```bash
+npm install axios
+```
+
+**Service:**
+```typescript
+// services/api.service.ts
+import { Injectable } from '@angular/core';
+import { Observable, from } from 'rxjs';
+import { apiClient } from '../api/client';
+
+@Injectable({ providedIn: 'root' })
+export class ApiService {
+  getStories(): Observable<any> {
+    return from(apiClient.get('/api/stories'));
+  }
+
+  getStory(id: number): Observable<any> {
+    return from(apiClient.get(`/api/stories/${id}`));
+  }
+
+  createStory(data: any): Observable<any> {
+    return from(apiClient.post('/api/stories', data));
+  }
+}
+```
+
+**Component:**
+```typescript
+// components/stories-list.component.ts
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ApiService } from '../services/api.service';
+
+@Component({
+  selector: 'app-stories-list',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div *ngIf="loading">Loading...</div>
+    <div *ngIf="error">Error: {{ error }}</div>
+    <div *ngIf="!loading && !error">
+      <div *ngFor="let story of stories">
+        <h3>{{ story.title }}</h3>
+        <p>{{ story.description }}</p>
+      </div>
+    </div>
+  `
+})
+export class StoriesListComponent implements OnInit {
+  stories: any[] = [];
+  loading = true;
+  error: any = null;
+
+  constructor(private apiService: ApiService) {}
+
+  ngOnInit() {
+    this.apiService.getStories().subscribe({
+      next: (data) => {
+        this.stories = data;
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = err;
+        this.loading = false;
+      }
+    });
+  }
+}
+```
+
+---
+
+### 🔧 Vanilla TypeScript / JavaScript
+
+**Không cần framework, chỉ cần TypeScript/JS:**
+```typescript
+import { apiClient } from './api/client';
+
+// Login
+async function login() {
+  const response = await apiClient.post('/api/auth/login', {
+    username: 'user@example.com',
+    password: 'password123'
+  });
+  
+  apiClient.setToken(response.accessToken);
+  return response;
+}
+
+// Load và render stories
+async function loadStories() {
+  const stories = await apiClient.get('/api/stories');
+  
+  const container = document.getElementById('stories');
+  container.innerHTML = stories.map(story => `
+    <div class="story">
+      <h3>${story.title}</h3>
+      <p>${story.description}</p>
+      <small>Views: ${story.viewCount}</small>
+    </div>
+  `).join('');
+}
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await login();
+    await loadStories();
+  } catch (error) {
+    console.error('Error:', error);
+  }
+});
 ```
 
 ---
