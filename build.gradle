@@ -59,6 +59,8 @@ dependencies {
 
     // Spring dotenv for loading .env files
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+    // OpenAPI/Swagger for API documentation
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 }
 
 tasks.named('test') {

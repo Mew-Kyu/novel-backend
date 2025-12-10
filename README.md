@@ -1,5 +1,24 @@
 # Novel Backend
 
+## 🎉 NEW: Auto-Generate Frontend Code!
+
+**Generate TypeScript code tự động từ backend trong 5 giây:**
+
+```powershell
+# Generate TypeScript types + API client + React hooks
+.\generate-frontend.ps1 -OutputPath "../novel-frontend/src/api"
+
+# Hoặc dùng interactive menu
+.\demo-generate.ps1
+
+# Xem API documentation (backend phải đang chạy)
+http://localhost:8080/swagger-ui.html
+```
+
+**📖 Xem hướng dẫn đầy đủ:** [QUICK_START_VIETNAM.md](QUICK_START_VIETNAM.md)
+
+---
+
 ## Setup
 
 ### Environment Variables

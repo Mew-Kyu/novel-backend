@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Authentication endpoints - no token required
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Swagger/OpenAPI endpoints - no token required
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         // Health check endpoints - no token required
                         .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health", "/api/crawl/health").permitAll()
                         // AI semantic search endpoint - no token required
