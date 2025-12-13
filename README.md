@@ -23,10 +23,6 @@ Generated code hoạt động với **TẤT CẢ frameworks**:
 - ✅ **Svelte, Solid, Qwik** - Dùng trực tiếp
 - ✅ **Vanilla TypeScript** - Bất kỳ framework nào
 
-**📖 Xem chi tiết:**
-- [QUICK_START_VIETNAM.md](QUICK_START_VIETNAM.md) - Full examples cho mọi framework
-- [FRAMEWORK_COMPATIBILITY.md](FRAMEWORK_COMPATIBILITY.md) - Framework compatibility guide
-
 ---
 
 ## Setup
@@ -144,6 +140,62 @@ When registering, you can optionally specify a role:
 ```
 
 If `roleName` is not specified, the user will be assigned the `USER` role by default.
+
+## Troubleshooting
+
+### OpenAPI 500 Internal Server Error
+
+If you get **500 Internal Server Error** from `/v3/api-docs`:
+
+**Quick Fix:**
+```powershell
+# Restart the backend to apply recent fixes
+.\rebuild-and-start.bat
+
+# Or manually:
+.\gradlew.bat clean build
+.\gradlew.bat bootRun
+
+# Then test: http://localhost:8080/v3/api-docs
+```
+
+**Recent fixes applied:**
+- ✅ Fixed circular reference in `Genre.java`
+- ✅ Added SpringDoc configuration
+- ✅ Added debug logging
+
+### OpenAPI Generation Issues
+
+If you encounter errors when running `generate-from-openapi.ps1`:
+
+**Quick Fix:**
+```powershell
+# 1. Check backend status
+.\check-backend-status.ps1
+
+# 2. Start backend if not running
+.\gradlew.bat bootRun
+
+# 3. Wait for startup, then generate
+.\generate-from-openapi.ps1 -OutputPath "../novel-frontend/src/api"
+```
+
+Common issues:
+- Backend not running → Run `.\gradlew.bat bootRun`
+- Database not running → Start PostgreSQL on port 5433
+- Port conflict → Check if port 8080 is in use
+- OpenAPI not accessible → Verify SecurityConfig.java permits `/v3/api-docs/**`
+- 500 error → Restart backend after recent fixes
+
+### Health Check
+
+Verify backend is running:
+```powershell
+# Open in browser
+http://localhost:8080/actuator/health
+http://localhost:8080/swagger-ui/index.html
+http://localhost:8080/v3/api-docs
+```
 
 ## Important Notes
 

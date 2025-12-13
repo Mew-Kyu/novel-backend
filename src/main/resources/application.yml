@@ -21,6 +21,18 @@ spring:
 server:
   port: 8080
 
+# SpringDoc/OpenAPI Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  show-actuator: false
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+
 jwt:
   secret: ${JWT_SECRET:MyVerySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLongForHS256Algorithm}
   access-token-expiration: 86400000  # 1 day
@@ -30,6 +42,8 @@ logging:
   level:
     com.graduate.novel: DEBUG
     org.springframework.security: DEBUG
+    org.springdoc: DEBUG
+    org.springframework.web: DEBUG
 
 gemini:
   api:

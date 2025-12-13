@@ -6,7 +6,7 @@ import com.graduate.novel.domain.story.StoryDto;
 import com.graduate.novel.domain.story.UpdateStoryRequest;
 import org.mapstruct.*;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {GenreMapper.class})
 public interface StoryMapper {
 
     StoryDto toDto(Story story);

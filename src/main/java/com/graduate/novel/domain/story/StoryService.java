@@ -6,7 +6,9 @@ import com.graduate.novel.domain.chapter.Chapter;
 import com.graduate.novel.domain.chapter.ChapterRepository;
 import com.graduate.novel.domain.comment.CommentRepository;
 import com.graduate.novel.domain.favorite.FavoriteRepository;
+import com.graduate.novel.domain.genre.Genre;
 import com.graduate.novel.domain.genre.GenreDto;
+import com.graduate.novel.domain.genre.GenreRepository;
 import com.graduate.novel.domain.rating.RatingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,6 +33,7 @@ public class StoryService {
     private final RatingRepository ratingRepository;
     private final CommentRepository commentRepository;
     private final FavoriteRepository favoriteRepository;
+    private final GenreRepository genreRepository;
 
     @Transactional(readOnly = true)
     public Page<StoryDto> getStories(String keyword, Pageable pageable) {
@@ -64,6 +69,18 @@ public class StoryService {
     @Transactional
     public StoryDto createStory(CreateStoryRequest request) {
         Story story = storyMapper.toEntity(request);
+
+        // Handle genres
+        if (request.genreIds() != null && !request.genreIds().isEmpty()) {
+            Set<Genre> genres = new HashSet<>();
+            for (Long genreId : request.genreIds()) {
+                Genre genre = genreRepository.findById(genreId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Genre not found with id: " + genreId));
+                genres.add(genre);
+            }
+            story.setGenres(genres);
+        }
+
         story = storyRepository.save(story);
         return storyMapper.toDto(story);
     }
@@ -74,6 +91,18 @@ public class StoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + id));
 
         storyMapper.updateEntity(request, story);
+
+        // Handle genres
+        if (request.genreIds() != null) {
+            Set<Genre> genres = new HashSet<>();
+            for (Long genreId : request.genreIds()) {
+                Genre genre = genreRepository.findById(genreId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Genre not found with id: " + genreId));
+                genres.add(genre);
+            }
+            story.setGenres(genres);
+        }
+
         story = storyRepository.save(story);
         return storyMapper.toDto(story);
     }
@@ -203,6 +232,57 @@ public class StoryService {
         Story story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + id));
         story.setFeatured(featured);
+        story = storyRepository.save(story);
+        return storyMapper.toDto(story);
+    }
+
+    /**
+     * Add genre to story
+     */
+    @Transactional
+    public StoryDto addGenreToStory(Long storyId, Long genreId) {
+        Story story = storyRepository.findById(storyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + storyId));
+        Genre genre = genreRepository.findById(genreId)
+                .orElseThrow(() -> new ResourceNotFoundException("Genre not found with id: " + genreId));
+
+        story.getGenres().add(genre);
+        story = storyRepository.save(story);
+        return storyMapper.toDto(story);
+    }
+
+    /**
+     * Remove genre from story
+     */
+    @Transactional
+    public StoryDto removeGenreFromStory(Long storyId, Long genreId) {
+        Story story = storyRepository.findById(storyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + storyId));
+        Genre genre = genreRepository.findById(genreId)
+                .orElseThrow(() -> new ResourceNotFoundException("Genre not found with id: " + genreId));
+
+        story.getGenres().remove(genre);
+        story = storyRepository.save(story);
+        return storyMapper.toDto(story);
+    }
+
+    /**
+     * Set genres for story (replaces all existing genres)
+     */
+    @Transactional
+    public StoryDto setGenresForStory(Long storyId, Set<Long> genreIds) {
+        Story story = storyRepository.findById(storyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + storyId));
+
+        Set<Genre> genres = new HashSet<>();
+        if (genreIds != null && !genreIds.isEmpty()) {
+            for (Long genreId : genreIds) {
+                Genre genre = genreRepository.findById(genreId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Genre not found with id: " + genreId));
+                genres.add(genre);
+            }
+        }
+        story.setGenres(genres);
         story = storyRepository.save(story);
         return storyMapper.toDto(story);
     }

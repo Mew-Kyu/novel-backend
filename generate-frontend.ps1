@@ -14,9 +14,15 @@ Write-Host "==================================" -ForegroundColor Cyan
 Write-Host "Output: $OutputPath" -ForegroundColor Yellow
 Write-Host ""
 
-# Tạo thư mục output
-New-Item -ItemType Directory -Force -Path "$OutputPath\types" | Out-Null
-New-Item -ItemType Directory -Force -Path "$OutputPath\api" | Out-Null
+# Resolve absolute path và tạo thư mục output
+$resolvedPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputPath)
+Write-Host "Resolved path: $resolvedPath" -ForegroundColor Gray
+
+# Tạo tất cả thư mục cần thiết
+New-Item -ItemType Directory -Force -Path "$resolvedPath\types" | Out-Null
+New-Item -ItemType Directory -Force -Path "$resolvedPath\api" | Out-Null
+Write-Host "Created directories: types, api" -ForegroundColor Gray
+Write-Host ""
 
 # Generate TypeScript types từ Java DTOs
 Write-Host "[1/4] Generating TypeScript types from Java DTOs..." -ForegroundColor Green
@@ -69,7 +75,7 @@ $typesFileContent += "// Generated at: $timestamp`r`n"
 $typesFileContent += "// DO NOT EDIT MANUALLY`r`n`r`n"
 $typesFileContent += $($allInterfaces -join "`r`n")
 
-[System.IO.File]::WriteAllText("$OutputPath\types\models.ts", $typesFileContent)
+[System.IO.File]::WriteAllText("$resolvedPath\types\models.ts", $typesFileContent)
 Write-Host "  Generated: types\models.ts" -ForegroundColor Green
 
 # Generate API client
@@ -157,7 +163,7 @@ export { apiClient };
 export default apiClient;
 "@
 
-[System.IO.File]::WriteAllText("$OutputPath\api\client.ts", $apiClientContent)
+[System.IO.File]::WriteAllText("$resolvedPath\api\client.ts", $apiClientContent)
 Write-Host "  Generated: api\client.ts" -ForegroundColor Green
 
 # Generate React hooks
@@ -235,7 +241,7 @@ export function useMutation<T>(
 }
 "@
 
-[System.IO.File]::WriteAllText("$OutputPath\api\hooks.ts", $hooksContent)
+[System.IO.File]::WriteAllText("$resolvedPath\api\hooks.ts", $hooksContent)
 Write-Host "  Generated: api\hooks.ts" -ForegroundColor Green
 
 # Generate README
@@ -249,7 +255,7 @@ Generated at: $timestamp
 ## Installation
 
 ``````bash
-npm install axios
+pnpm add axios
 ``````
 
 ## Usage
@@ -301,17 +307,18 @@ function StoriesList() {
 ``````
 "@
 
-[System.IO.File]::WriteAllText("$OutputPath\README.md", $readmeContent)
+[System.IO.File]::WriteAllText("$resolvedPath\README.md", $readmeContent)
 Write-Host "  Generated: README.md" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host "Generation Complete!" -ForegroundColor Green
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "Output: $OutputPath" -ForegroundColor Yellow
+Write-Host "Output: $resolvedPath" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  1. Copy to your frontend project" -ForegroundColor White
-Write-Host "  2. Run: npm install axios" -ForegroundColor White
+Write-Host "  1. Copy to your frontend project (if needed)" -ForegroundColor White
+Write-Host "  2. Run: pnpm install axios" -ForegroundColor White
+Write-Host "  3. Import and use!" -ForegroundColor White
 Write-Host "  3. Import and use!" -ForegroundColor White
 

@@ -4,6 +4,14 @@ import com.graduate.novel.ai.dto.TranslateStoryRequest;
 import com.graduate.novel.ai.dto.TranslateStoryResponse;
 import com.graduate.novel.ai.service.TranslationService;
 import com.graduate.novel.domain.story.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/stories")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Story Management", description = "APIs for managing stories and their genres")
 public class StoryController {
 
     private final StoryService storyService;
@@ -121,6 +130,19 @@ public class StoryController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @Operation(
+            summary = "Create a new story",
+            description = "Create a new story with optional multiple genres. Requires ADMIN or MODERATOR role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Story created successfully",
+                    content = @Content(schema = @Schema(implementation = StoryDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires ADMIN or MODERATOR role"),
+            @ApiResponse(responseCode = "404", description = "Genre not found")
+    })
     public ResponseEntity<StoryDto> createStory(@Valid @RequestBody CreateStoryRequest request) {
         StoryDto story = storyService.createStory(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(story);
@@ -128,8 +150,21 @@ public class StoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @Operation(
+            summary = "Update a story",
+            description = "Update story details and optionally replace all genres. Requires ADMIN or MODERATOR role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Story updated successfully",
+                    content = @Content(schema = @Schema(implementation = StoryDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires ADMIN or MODERATOR role"),
+            @ApiResponse(responseCode = "404", description = "Story or genre not found")
+    })
     public ResponseEntity<StoryDto> updateStory(
-            @PathVariable Long id,
+            @Parameter(description = "Story ID", required = true) @PathVariable Long id,
             @Valid @RequestBody UpdateStoryRequest request
     ) {
         StoryDto story = storyService.updateStory(id, request);
@@ -142,6 +177,79 @@ public class StoryController {
         storyService.deleteStory(id);
         return ResponseEntity.noContent().build();
     }
+
+    // ========== Genre Management Endpoints ==========
+
+    @PostMapping("/{storyId}/genres/{genreId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @Operation(
+            summary = "Add a genre to a story",
+            description = "Add a single genre to an existing story without affecting other genres. Requires ADMIN or MODERATOR role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Genre added successfully",
+                    content = @Content(schema = @Schema(implementation = StoryDto.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires ADMIN or MODERATOR role"),
+            @ApiResponse(responseCode = "404", description = "Story or genre not found")
+    })
+    public ResponseEntity<StoryDto> addGenreToStory(
+            @Parameter(description = "Story ID", required = true) @PathVariable Long storyId,
+            @Parameter(description = "Genre ID to add", required = true) @PathVariable Long genreId
+    ) {
+        StoryDto story = storyService.addGenreToStory(storyId, genreId);
+        return ResponseEntity.ok(story);
+    }
+
+    @DeleteMapping("/{storyId}/genres/{genreId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @Operation(
+            summary = "Remove a genre from a story",
+            description = "Remove a single genre from a story without affecting other genres. Requires ADMIN or MODERATOR role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Genre removed successfully",
+                    content = @Content(schema = @Schema(implementation = StoryDto.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires ADMIN or MODERATOR role"),
+            @ApiResponse(responseCode = "404", description = "Story or genre not found")
+    })
+    public ResponseEntity<StoryDto> removeGenreFromStory(
+            @Parameter(description = "Story ID", required = true) @PathVariable Long storyId,
+            @Parameter(description = "Genre ID to remove", required = true) @PathVariable Long genreId
+    ) {
+        StoryDto story = storyService.removeGenreFromStory(storyId, genreId);
+        return ResponseEntity.ok(story);
+    }
+
+    @PutMapping("/{storyId}/genres")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @Operation(
+            summary = "Set all genres for a story",
+            description = "Replace all existing genres with a new set of genres. Send an empty array to remove all genres. Requires ADMIN or MODERATOR role.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Genres updated successfully",
+                    content = @Content(schema = @Schema(implementation = StoryDto.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request body"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires ADMIN or MODERATOR role"),
+            @ApiResponse(responseCode = "404", description = "Story or genre not found")
+    })
+    public ResponseEntity<StoryDto> setGenresForStory(
+            @Parameter(description = "Story ID", required = true) @PathVariable Long storyId,
+            @Parameter(description = "Array of genre IDs", required = true,
+                    schema = @Schema(type = "array", example = "[1, 2, 3]"))
+            @RequestBody java.util.Set<Long> genreIds
+    ) {
+        StoryDto story = storyService.setGenresForStory(storyId, genreIds);
+        return ResponseEntity.ok(story);
+    }
+
+    // ========== Translation Endpoints ==========
 
     /**
      * Translate story title and/or description
