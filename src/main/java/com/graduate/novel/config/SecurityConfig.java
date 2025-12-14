@@ -60,6 +60,9 @@ public class SecurityConfig {
                         // Public chapter endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters").permitAll() // GET /api/stories/{storyId}/chapters
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters/*").permitAll() // GET /api/stories/{storyId}/chapters/{chapterId}
+                        .requestMatchers(HttpMethod.GET, "/api/chapters/latest").permitAll() // GET /api/chapters/latest
+                        // Public stats endpoints - no token required
+                        .requestMatchers(HttpMethod.GET, "/api/stats/summary").permitAll() // GET /api/stats/summary
                         // Public rating/comment read endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/ratings/story/*/average").permitAll() // GET average rating
                         .requestMatchers(HttpMethod.GET, "/api/ratings/story/*").permitAll() // GET ratings for a story
