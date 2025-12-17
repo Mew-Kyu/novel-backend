@@ -1,4 +1,4 @@
-package com.graduate.novel.domain.export;
+package com.graduate.novel.service;
 
 import com.graduate.novel.domain.chapter.Chapter;
 import com.graduate.novel.domain.chapter.ChapterRepository;

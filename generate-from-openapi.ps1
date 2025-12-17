@@ -116,11 +116,7 @@ if (-not $generatorInstalled) {
 
 # Generate TypeScript axios client
 Write-Host "`n[4/5] Generating TypeScript client..." -ForegroundColor Green
-openapi-generator-cli generate `
-    -i "$OutputPath/openapi.json" `
-    -g typescript-axios `
-    -o "$OutputPath/generated" `
-    --additional-properties=supportsES6=true,withSeparateModelsAndApi=true,apiPackage=api,modelPackage=models
+openapi-generator-cli generate -i "$OutputPath/openapi.json" -g typescript-axios -o "$OutputPath/generated" --additional-properties=supportsES6=true,withSeparateModelsAndApi=true,apiPackage=api,modelPackage=models
 
 Write-Host "[OK] TypeScript client generated!" -ForegroundColor Green
 
