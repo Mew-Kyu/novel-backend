@@ -24,6 +24,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -69,6 +70,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/comments/story/*").permitAll() // GET comments for a story
                         .requestMatchers(HttpMethod.GET, "/api/comments/story/*/count").permitAll() // GET comment count
                         .requestMatchers(HttpMethod.GET, "/api/comments/*").permitAll() // GET single comment
+                        // Export endpoints - requires authentication but allows all roles
+                        .requestMatchers(HttpMethod.GET, "/api/export/*/epub").authenticated() // GET /api/export/{storyId}/epub
+                        // Cloudinary upload endpoint - requires ADMIN or MODERATOR role
+                        .requestMatchers(HttpMethod.POST, "/api/cloudinary/upload").hasAnyRole("ADMIN", "MODERATOR")
                         // Admin endpoints require ADMIN role (handled by @PreAuthorize, but adding explicit rule for clarity)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // All other endpoints require authentication
@@ -84,6 +89,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("deprecation")
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
@@ -114,7 +120,7 @@ public class SecurityConfig {
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
         ));
         // Allow all headers
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         // Allow credentials (cookies, authorization headers)
         configuration.setAllowCredentials(true);
         // Max age for preflight requests

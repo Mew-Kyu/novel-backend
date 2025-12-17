@@ -770,6 +770,51 @@
 			]
 		},
 		{
+			"name": "Export",
+			"item": [
+				{
+					"name": "Export Story to EPUB (Full)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/export/1/epub",
+							"host": ["{{base_url}}"],
+							"path": ["api", "export", "1", "epub"]
+						},
+						"description": "Export a complete story to EPUB format.\n\n**Authentication:** Requires JWT token (any authenticated user)\n\n**Features:**\n- Downloads all chapters of the story\n- Includes cover image (if available)\n- Uses translated content when available, falls back to raw content\n- Generates a properly formatted EPUB file\n\n**Response:**\n- Content-Type: application/epub+zip\n- File will be downloaded as: story_{id}_full.epub"
+					},
+					"response": []
+				},
+				{
+					"name": "Export Story to EPUB (Chapter Range)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/export/1/epub?start=1&end=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "export", "1", "epub"],
+							"query": [
+								{
+									"key": "start",
+									"value": "1",
+									"description": "Start chapter index (inclusive)"
+								},
+								{
+									"key": "end",
+									"value": "10",
+									"description": "End chapter index (inclusive)"
+								}
+							]
+						},
+						"description": "Export a specific chapter range of a story to EPUB format.\n\n**Authentication:** Requires JWT token (any authenticated user)\n\n**Parameters:**\n- `start`: Starting chapter index (inclusive)\n- `end`: Ending chapter index (inclusive)\n\n**Features:**\n- Downloads only specified chapter range\n- Includes cover image (if available)\n- Uses translated content when available, falls back to raw content\n- Generates a properly formatted EPUB file\n\n**Response:**\n- Content-Type: application/epub+zip\n- File will be downloaded as: story_{id}_ch{start}-{end}.epub"
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Crawl Jobs",
 			"item": [
 				{
@@ -1984,6 +2029,36 @@
 							"path": ["api", "stats", "summary"]
 						},
 						"description": "Get platform statistics summary.\n\nNo authentication required.\n\nResponse:\n```json\n{\n  \"totalStories\": 1250,\n  \"totalGenres\": 15,\n  \"totalChapters\": 45000,\n  \"totalUsers\": 3500,\n  \"totalViews\": 125000\n}\n```\n\nUseful for:\n- Homepage statistics bar\n- About page\n- Admin dashboard\n- Marketing materials"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cloudinary",
+			"item": [
+				{
+					"name": "Upload Novel Cover Image",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Select an image file (JPG, PNG, GIF, WebP)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cloudinary/upload",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cloudinary", "upload"]
+						},
+						"description": "Upload a novel cover image to Cloudinary CDN.\n\n**Authentication:** Required (JWT Bearer token)\n**Required Role:** ADMIN or MODERATOR\n\n**Features:**\n- Automatic WebP conversion for optimal web performance\n- Auto quality optimization\n- Stored in 'novel_covers' folder\n- Returns secure HTTPS URL\n- 10MB file size limit\n\n**Request:**\n- Method: POST\n- Content-Type: multipart/form-data\n- Body: file (image file)\n\n**Response (Success - 200):**\n```json\n{\n  \"success\": true,\n  \"message\": \"Image uploaded successfully\",\n  \"url\": \"https://res.cloudinary.com/your-cloud/image/upload/v1234567890/novel_covers/xyz.webp\",\n  \"originalFilename\": \"cover.jpg\"\n}\n```\n\n**Response (Error - 400):**\n```json\n{\n  \"success\": false,\n  \"error\": \"File must be an image\"\n}\n```\n\n**Response (Error - 401):**\n```json\n{\n  \"error\": \"Unauthorized\",\n  \"message\": \"JWT token missing or invalid\"\n}\n```\n\n**Response (Error - 403):**\n```json\n{\n  \"error\": \"Forbidden\",\n  \"message\": \"Insufficient permissions - requires ADMIN or MODERATOR role\"\n}\n```\n\n**Validation Rules:**\n- File must not be empty\n- File must be an image (image/*)\n- File size must be ≤ 10MB\n\n**Usage:**\n1. Login as ADMIN or MODERATOR to get JWT token\n2. Select an image file in the 'file' field\n3. Send request\n4. Use returned URL for story cover image\n\n**Example Use Cases:**\n- Upload cover for new novel\n- Update existing novel cover\n- Upload author avatar\n- Upload promotional images"
 					},
 					"response": []
 				}
