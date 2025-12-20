@@ -265,7 +265,7 @@ function StoriesList() {
 When backend APIs change, regenerate the client:
 
 ``````bash
-.\generate-from-openapi-clean.ps1 -OutputPath "./src/api"
+.\generate-from-openapi.ps1 -OutputPath "./src/api"
 ``````
 
 ## Available APIs
