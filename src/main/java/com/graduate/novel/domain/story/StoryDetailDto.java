@@ -20,6 +20,7 @@ public record StoryDetailDto(
     String sourceSite,
     LocalDateTime createdAt,
     LocalDateTime updatedAt,
+    StoryStatus status,
 
     // Metadata
     Long viewCount,

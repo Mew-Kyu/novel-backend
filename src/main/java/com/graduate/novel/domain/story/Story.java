@@ -86,6 +86,11 @@ public class Story {
     @Builder.Default
     private Boolean featured = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20)
+    @Builder.Default
+    private StoryStatus status = StoryStatus.PUBLISHED;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -98,6 +103,9 @@ public class Story {
         }
         if (featured == null) {
             featured = false;
+        }
+        if (status == null) {
+            status = StoryStatus.PUBLISHED;
         }
     }
 

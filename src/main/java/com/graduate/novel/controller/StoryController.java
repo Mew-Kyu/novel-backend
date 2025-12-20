@@ -37,6 +37,24 @@ public class StoryController {
     // ========== Homepage Endpoints ==========
 
     /**
+     * Get story detail with full metadata (optimized with caching)
+     */
+    @GetMapping("/{id}/detail")
+    @Operation(
+            summary = "Get story detail with metadata",
+            description = "Retrieve a single story with full metadata including view count, ratings, comments, favorites, genres, and latest chapter. Optimized with caching for better performance."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Story detail retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = StoryDetailDto.class))),
+            @ApiResponse(responseCode = "404", description = "Story not found")
+    })
+    public ResponseEntity<StoryDetailDto> getStoryDetail(@PathVariable Long id) {
+        StoryDetailDto story = storyService.getStoryWithMetadata(id);
+        return ResponseEntity.ok(story);
+    }
+
+    /**
      * Get stories with full metadata (for homepage)
      */
     @GetMapping("/with-metadata")

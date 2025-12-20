@@ -58,6 +58,11 @@ public class SecurityConfig {
                         // Public story endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stories").permitAll() // GET /api/stories
                         .requestMatchers(HttpMethod.GET, "/api/stories/*").permitAll() // GET /api/stories/{id}
+                        .requestMatchers(HttpMethod.GET, "/api/stories/*/detail").permitAll() // GET /api/stories/{id}/detail - NEW
+                        .requestMatchers(HttpMethod.GET, "/api/stories/with-metadata").permitAll() // GET /api/stories/with-metadata - NEW
+                        .requestMatchers(HttpMethod.GET, "/api/stories/featured").permitAll() // GET /api/stories/featured - NEW
+                        .requestMatchers(HttpMethod.GET, "/api/stories/trending").permitAll() // GET /api/stories/trending - NEW
+                        .requestMatchers(HttpMethod.POST, "/api/stories/*/view").permitAll() // POST /api/stories/{id}/view - NEW (no auth required)
                         // Public chapter endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters").permitAll() // GET /api/stories/{storyId}/chapters
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters/*").permitAll() // GET /api/stories/{storyId}/chapters/{chapterId}

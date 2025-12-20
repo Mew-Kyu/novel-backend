@@ -11,6 +11,9 @@ import com.graduate.novel.domain.genre.GenreDto;
 import com.graduate.novel.domain.genre.GenreRepository;
 import com.graduate.novel.domain.rating.RatingRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -86,6 +89,12 @@ public class StoryService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "storyDetails", key = "#id"),
+        @CacheEvict(value = "storyList", allEntries = true),
+        @CacheEvict(value = "featuredStories", allEntries = true),
+        @CacheEvict(value = "trendingStories", allEntries = true)
+    })
     public StoryDto updateStory(Long id, UpdateStoryRequest request) {
         Story story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + id));
@@ -108,6 +117,12 @@ public class StoryService {
     }
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "storyDetails", key = "#id"),
+        @CacheEvict(value = "storyList", allEntries = true),
+        @CacheEvict(value = "featuredStories", allEntries = true),
+        @CacheEvict(value = "trendingStories", allEntries = true)
+    })
     public void deleteStory(Long id) {
         Story story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + id));
@@ -148,9 +163,10 @@ public class StoryService {
     // ========== Homepage Features ==========
 
     /**
-     * Get story with full metadata
+     * Get story with full metadata (cached for performance)
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "storyDetails", key = "#id", unless = "#result == null")
     public StoryDetailDto getStoryWithMetadata(Long id) {
         Story story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + id));
@@ -191,9 +207,10 @@ public class StoryService {
     }
 
     /**
-     * Get featured stories
+     * Get featured stories (cached)
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "featuredStories", key = "#limit")
     public List<StoryDetailDto> getFeaturedStories(int limit) {
         Page<Story> stories = storyRepository.findFeaturedStories(PageRequest.of(0, limit));
         return stories.stream()
@@ -202,9 +219,10 @@ public class StoryService {
     }
 
     /**
-     * Get trending stories (updated recently with high view count)
+     * Get trending stories (cached, updated recently with high view count)
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "trendingStories", key = "#limit + '_' + #days")
     public List<StoryDetailDto> getTrendingStories(int limit, int days) {
         LocalDateTime since = LocalDateTime.now().minusDays(days);
         Page<Story> stories = storyRepository.findTrendingStories(since, PageRequest.of(0, limit));
@@ -228,6 +246,10 @@ public class StoryService {
      * Set featured status (Admin only)
      */
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "storyDetails", key = "#id"),
+        @CacheEvict(value = "featuredStories", allEntries = true)
+    })
     public StoryDto setFeatured(Long id, boolean featured) {
         Story story = storyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + id));
@@ -339,6 +361,7 @@ public class StoryService {
                 story.getSourceSite(),
                 story.getCreatedAt(),
                 story.getUpdatedAt(),
+                story.getStatus(),
                 story.getViewCount(),
                 story.getFeatured(),
                 totalChapters,

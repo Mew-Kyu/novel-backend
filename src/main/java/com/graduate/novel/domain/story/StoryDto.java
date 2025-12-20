@@ -50,6 +50,9 @@ public record StoryDto(
     @Schema(description = "Creation timestamp", example = "2025-12-13T10:00:00")
     LocalDateTime createdAt,
 
+    @Schema(description = "Story publication status", example = "PUBLISHED")
+    StoryStatus status,
+
     @Schema(description = "List of genres associated with this story")
     List<GenreDto> genres
 ) {}

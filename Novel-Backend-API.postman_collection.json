@@ -542,6 +542,156 @@
 						"description": "Translate story by ID (simplified version). Translates both title and description by default.\n\n**✨ NEW: Also romanizes author name automatically!**\n\n**What Gets Translated:**\n- Title: Japanese → Vietnamese\n- Description: Japanese → Vietnamese\n- **Author Name: Japanese → Romaji (NEW!)**\n\n**Response includes author name fields:**\n- `originalAuthorName`: e.g., \"錬金王\"\n- `translatedAuthorName`: e.g., \"Renkinō\""
 					},
 					"response": []
+				},
+				{
+					"name": "Get Story Detail with Metadata",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/detail",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "detail"]
+						},
+						"description": "**✨ NEW ENDPOINT:** Get comprehensive story details with full metadata.\n\n**Performance:**\n- First request: ~50-100ms (database query)\n- Cached requests: ~5-10ms (90% faster!)\n- Cache duration: 10 minutes\n\n**Returns:**\n- All story information (title, author, description in raw/translated)\n- Story status (DRAFT, PUBLISHED, COMPLETED, ARCHIVED)\n- View count\n- Featured status\n- Total chapters\n- Average rating & total ratings\n- Total comments\n- Total favorites\n- List of genres\n- Latest chapter info (if available)\n\n**Response Example:**\n```json\n{\n  \"id\": 1,\n  \"title\": \"My Epic Fantasy\",\n  \"status\": \"PUBLISHED\",\n  \"viewCount\": 1500,\n  \"featured\": false,\n  \"totalChapters\": 50,\n  \"averageRating\": 4.5,\n  \"totalRatings\": 123,\n  \"totalComments\": 45,\n  \"totalFavorites\": 234,\n  \"genres\": [...],\n  \"latestChapter\": {\n    \"id\": 50,\n    \"chapterIndex\": 50,\n    \"title\": \"Chapter 50: The Final Battle\",\n    \"updatedAt\": \"2025-12-20T15:30:00\"\n  }\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stories with Metadata (Homepage)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/with-metadata?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "with-metadata"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								},
+								{
+									"key": "keyword",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "genreId",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "genre",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of stories with full metadata (for homepage display).\n\n**Features:**\n- Includes all metadata (views, ratings, comments, favorites)\n- Supports filtering by keyword, genre ID, or genre name\n- Cached for performance\n\n**Use Cases:**\n- Homepage story listing\n- Genre-based filtering\n- Search results with metadata"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Featured Stories",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/featured?limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "featured"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Number of featured stories to return (default: 5)"
+								}
+							]
+						},
+						"description": "Get list of featured stories for homepage carousel/highlights.\n\n**Features:**\n- Only returns stories marked as featured\n- Includes full metadata\n- Cached for 10 minutes\n- Sorted by update date (newest first)\n\n**Use Case:**\nHomepage featured section, carousel, or highlights"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trending Stories",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/trending?limit=10&days=7",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "trending"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of trending stories to return (default: 10)"
+								},
+								{
+									"key": "days",
+									"value": "7",
+									"description": "Look back period in days (default: 7)"
+								}
+							]
+						},
+						"description": "Get trending stories based on recent views.\n\n**Algorithm:**\n- Stories updated in last N days\n- Sorted by view count (highest first)\n- Then by update date (newest first)\n\n**Features:**\n- Cached for 10 minutes\n- Includes full metadata\n\n**Use Cases:**\n- \"Trending Now\" section\n- \"Popular This Week\" widget\n- Homepage trending section"
+					},
+					"response": []
+				},
+				{
+					"name": "Increment View Count",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/view",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "view"]
+						},
+						"description": "Increment view count for a story.\n\n**When to call:**\n- When user opens story detail page\n- When user starts reading\n\n**Note:**\n- Does not require authentication\n- Invalidates story detail cache\n- Updates trending calculations"
+					},
+					"response": []
+				},
+				{
+					"name": "Set Featured Status (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stories/1/featured?featured=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stories", "1", "featured"],
+							"query": [
+								{
+									"key": "featured",
+									"value": "true",
+									"description": "true to feature, false to unfeature"
+								}
+							]
+						},
+						"description": "Set or unset featured status for a story. **Requires ADMIN role.**\n\n**Features:**\n- Only ADMIN can mark stories as featured\n- Automatically invalidates cache\n- Featured stories appear in homepage carousel\n\n**Use Case:**\nAdmin dashboard to manage featured content"
+					},
+					"response": []
 				}
 			]
 		},
