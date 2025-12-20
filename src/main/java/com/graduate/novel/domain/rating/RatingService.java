@@ -6,11 +6,15 @@ import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import com.graduate.novel.domain.user.User;
 import com.graduate.novel.domain.user.UserRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -24,6 +28,7 @@ public class RatingService {
     private final StoryRepository storyRepository;
     private final UserRepository userRepository;
     private final RatingMapper ratingMapper;
+    private final EntityManager entityManager;
 
     @Transactional
     public RatingDto createOrUpdateRating(Long userId, CreateRatingRequest request) {
@@ -42,6 +47,9 @@ public class RatingService {
         rating.setRating(request.rating());
         rating = ratingRepository.save(rating);
 
+        // Update story's average rating cache
+        updateStoryRatingCache(request.storyId());
+
         return ratingMapper.toDto(rating);
     }
 
@@ -55,8 +63,12 @@ public class RatingService {
             throw new AccessDeniedException("You can only update your own ratings");
         }
 
+        Long storyId = rating.getStory().getId();
         rating.setRating(request.rating());
         rating = ratingRepository.save(rating);
+
+        // Update story's average rating cache
+        updateStoryRatingCache(storyId);
 
         return ratingMapper.toDto(rating);
     }
@@ -71,7 +83,11 @@ public class RatingService {
             throw new AccessDeniedException("You can only delete your own ratings");
         }
 
+        Long storyId = rating.getStory().getId();
         ratingRepository.delete(rating);
+
+        // Update story's average rating cache
+        updateStoryRatingCache(storyId);
     }
 
     @Transactional(readOnly = true)
@@ -97,7 +113,7 @@ public class RatingService {
     @Transactional(readOnly = true)
     public StoryRatingDto getStoryRating(Long storyId) {
         // Verify story exists
-        storyRepository.findById(storyId)
+        Story story = storyRepository.findById(storyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + storyId));
 
         Double avgRating = ratingRepository.getAverageRatingByStoryId(storyId);
@@ -112,6 +128,41 @@ public class RatingService {
         }
 
         return new StoryRatingDto(storyId, roundedAverage, totalRatings);
+    }
+
+    /**
+     * Update story's averageRating and totalRatings cache
+     * Called automatically after any rating change
+     * Uses REQUIRES_NEW to ensure cache is committed immediately
+     * Clears story detail cache to ensure fresh data on next request
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Caching(evict = {
+        @CacheEvict(value = "storyDetails", key = "#storyId"),
+        @CacheEvict(value = "featuredStories", allEntries = true),
+        @CacheEvict(value = "trendingStories", allEntries = true)
+    })
+    protected void updateStoryRatingCache(Long storyId) {
+        Story story = storyRepository.findById(storyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Story not found with id: " + storyId));
+
+        // Optimized: Get both AVG and COUNT in a single query
+        RatingStats stats = ratingRepository.getRatingStatsByStoryId(storyId);
+
+        // Round to 1 decimal place
+        Double roundedAverage = null;
+        if (stats.averageRating() != null) {
+            roundedAverage = BigDecimal.valueOf(stats.averageRating())
+                    .setScale(1, RoundingMode.HALF_UP)
+                    .doubleValue();
+        }
+
+        story.setAverageRating(roundedAverage);
+        story.setTotalRatings(stats.totalRatings());
+        storyRepository.saveAndFlush(story); // Flush immediately to ensure cache is persisted
+
+        // Clear EntityManager cache to ensure subsequent queries get fresh data
+        entityManager.clear();
     }
 }
 

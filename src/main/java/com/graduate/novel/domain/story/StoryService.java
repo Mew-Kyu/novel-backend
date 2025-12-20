@@ -9,7 +9,6 @@ import com.graduate.novel.domain.favorite.FavoriteRepository;
 import com.graduate.novel.domain.genre.Genre;
 import com.graduate.novel.domain.genre.GenreDto;
 import com.graduate.novel.domain.genre.GenreRepository;
-import com.graduate.novel.domain.rating.RatingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,7 +32,6 @@ public class StoryService {
     private final StoryRepository storyRepository;
     private final StoryMapper storyMapper;
     private final ChapterRepository chapterRepository;
-    private final RatingRepository ratingRepository;
     private final CommentRepository commentRepository;
     private final FavoriteRepository favoriteRepository;
     private final GenreRepository genreRepository;
@@ -315,8 +313,11 @@ public class StoryService {
     private StoryDetailDto mapToDetailDto(Story story) {
         // Get metadata
         Integer totalChapters = chapterRepository.countByStoryId(story.getId());
-        Double averageRating = ratingRepository.getAverageRatingByStoryId(story.getId());
-        Long totalRatings = ratingRepository.getTotalRatingsByStoryId(story.getId());
+
+        // Use cached rating values from Story entity (updated by RatingService)
+        Double averageRating = story.getAverageRating();
+        Long totalRatings = story.getTotalRatings();
+
         Long totalComments = commentRepository.countByStoryId(story.getId());
         Long totalFavorites = favoriteRepository.countByStoryId(story.getId());
 

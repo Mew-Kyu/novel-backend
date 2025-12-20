@@ -86,6 +86,14 @@ public class Story {
     @Builder.Default
     private Boolean featured = false;
 
+    @Column(name = "average_rating", columnDefinition = "NUMERIC(3,1)", nullable = true)
+    @Builder.Default
+    private Double averageRating = null;
+
+    @Column(name = "total_ratings", nullable = false)
+    @Builder.Default
+    private Long totalRatings = 0L;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
     @Builder.Default
