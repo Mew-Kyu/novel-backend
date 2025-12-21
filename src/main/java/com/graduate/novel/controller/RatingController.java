@@ -74,5 +74,28 @@ public class RatingController {
         RatingDto rating = ratingService.getUserRatingForStory(user.getId(), storyId);
         return ResponseEntity.ok(rating);
     }
+
+    /**
+     * Admin/Moderator endpoint to delete any rating
+     */
+    @DeleteMapping("/admin/{ratingId}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    public ResponseEntity<Void> adminDeleteRating(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long ratingId) {
+        ratingService.deleteRating(user.getId(), ratingId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Admin/Moderator endpoint to get all ratings (paginated)
+     */
+    @GetMapping("/admin/all")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    public ResponseEntity<Page<RatingDto>> getAllRatingsForAdmin(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<RatingDto> ratings = ratingService.getAllRatings(pageable);
+        return ResponseEntity.ok(ratings);
+    }
 }
 

@@ -2,6 +2,7 @@ package com.graduate.novel.domain.rating;
 
 import com.graduate.novel.common.exception.ResourceNotFoundException;
 import com.graduate.novel.common.mapper.RatingMapper;
+import com.graduate.novel.domain.role.Role;
 import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import com.graduate.novel.domain.user.User;
@@ -78,8 +79,11 @@ public class RatingService {
         Rating rating = ratingRepository.findById(ratingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rating not found with id: " + ratingId));
 
-        // Only the owner can delete their rating (no moderator override)
-        if (!rating.getUser().getId().equals(userId)) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+
+        // Allow deletion if user owns the rating OR user is ADMIN/MODERATOR
+        if (!rating.getUser().getId().equals(userId) && !hasModeratorAccess(user)) {
             throw new AccessDeniedException("You can only delete your own ratings");
         }
 
@@ -88,6 +92,13 @@ public class RatingService {
 
         // Update story's average rating cache
         updateStoryRatingCache(storyId);
+    }
+
+    /**
+     * Check if user has ADMIN or MODERATOR role
+     */
+    private boolean hasModeratorAccess(User user) {
+        return user.hasRole(Role.ADMIN) || user.hasRole(Role.MODERATOR);
     }
 
     @Transactional(readOnly = true)
@@ -163,6 +174,12 @@ public class RatingService {
 
         // Clear EntityManager cache to ensure subsequent queries get fresh data
         entityManager.clear();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<RatingDto> getAllRatings(Pageable pageable) {
+        return ratingRepository.findAll(pageable)
+                .map(ratingMapper::toDto);
     }
 }
 

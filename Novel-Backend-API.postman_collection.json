@@ -1253,6 +1253,44 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "[ADMIN] Get All Ratings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ratings/admin/all?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "admin", "all"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all ratings in the system. Requires ADMIN or MODERATOR role."
+					},
+					"response": []
+				},
+				{
+					"name": "[ADMIN] Delete Any Rating",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ratings/admin/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ratings", "admin", "1"]
+						},
+						"description": "Delete any rating regardless of owner. Requires ADMIN or MODERATOR role."
+					},
+					"response": []
 				}
 			]
 		},
@@ -1394,6 +1432,44 @@
 								}
 							]
 						}
+					},
+					"response": []
+				},
+				{
+					"name": "[ADMIN] Get All Comments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/admin/all?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "admin", "all"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get all comments in the system. Requires ADMIN or MODERATOR role."
+					},
+					"response": []
+				},
+				{
+					"name": "[ADMIN] Delete Any Comment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/comments/admin/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "comments", "admin", "1"]
+						},
+						"description": "Delete any comment regardless of owner. Requires ADMIN or MODERATOR role."
 					},
 					"response": []
 				}

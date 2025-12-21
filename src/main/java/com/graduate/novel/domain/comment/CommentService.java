@@ -114,5 +114,11 @@ public class CommentService {
     public long getCommentCountByStory(Long storyId) {
         return commentRepository.countByStoryId(storyId);
     }
+
+    @Transactional(readOnly = true)
+    public Page<CommentDto> getAllComments(Pageable pageable) {
+        return commentRepository.findAll(pageable)
+                .map(commentMapper::toDto);
+    }
 }
 

@@ -72,5 +72,28 @@ public class CommentController {
         Page<CommentDto> comments = commentService.getCommentsByUser(user.getId(), pageable);
         return ResponseEntity.ok(comments);
     }
+
+    /**
+     * Admin/Moderator endpoint to delete any comment
+     */
+    @DeleteMapping("/admin/{commentId}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    public ResponseEntity<Void> adminDeleteComment(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long commentId) {
+        commentService.deleteComment(user.getId(), commentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Admin/Moderator endpoint to get all comments (paginated)
+     */
+    @GetMapping("/admin/all")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    public ResponseEntity<Page<CommentDto>> getAllCommentsForAdmin(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<CommentDto> comments = commentService.getAllComments(pageable);
+        return ResponseEntity.ok(comments);
+    }
 }
 

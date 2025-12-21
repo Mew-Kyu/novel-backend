@@ -46,15 +46,19 @@ public class SecurityConfig {
                         // Swagger/OpenAPI endpoints - no token required
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         // Health check endpoints - no token required
-                        .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health", "/api/crawl/health").permitAll()
+                        .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health", "/api/crawl/health", "/api/ai/health").permitAll()
                         // AI semantic search endpoint - no token required
                         .requestMatchers(HttpMethod.POST, "/api/ai/search/semantic").permitAll()
+                        // AI translation endpoints - requires ADMIN or MODERATOR role
+                        .requestMatchers("/api/ai/translate/**").hasAnyRole("ADMIN", "MODERATOR")
+                        // AI embedding endpoints - requires ADMIN or MODERATOR role
+                        .requestMatchers("/api/ai/embeddings/**").hasAnyRole("ADMIN", "MODERATOR")
                         // Public genre READ endpoints - no token required (GET only)
                         .requestMatchers(HttpMethod.GET, "/api/genres", "/api/genres/**").permitAll()
-                        // Genre CUD endpoints require authentication (POST, PUT, DELETE)
-                        .requestMatchers(HttpMethod.POST, "/api/genres").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/genres/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/genres/**").authenticated()
+                        // Genre CUD endpoints requires ADMIN or MODERATOR role (POST, PUT, DELETE)
+                        .requestMatchers(HttpMethod.POST, "/api/genres").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/genres/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/genres/**").hasAnyRole("ADMIN", "MODERATOR")
                         // Public story endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stories").permitAll() // GET /api/stories
                         .requestMatchers(HttpMethod.GET, "/api/stories/*").permitAll() // GET /api/stories/{id}
@@ -63,10 +67,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/stories/featured").permitAll() // GET /api/stories/featured
                         .requestMatchers(HttpMethod.GET, "/api/stories/trending").permitAll() // GET /api/stories/trending
                         .requestMatchers(HttpMethod.POST, "/api/stories/*/view").permitAll() // POST /api/stories/{id}/view
+                        // Story CUD operations - requires ADMIN or MODERATOR role
+                        .requestMatchers(HttpMethod.POST, "/api/stories").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/stories/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/stories/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/stories/**").hasAnyRole("ADMIN", "MODERATOR")
+                        // Story translation endpoints - requires ADMIN or MODERATOR role
+                        .requestMatchers("/api/stories/translate/**").hasAnyRole("ADMIN", "MODERATOR")
                         // Public chapter endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters").permitAll() // GET /api/stories/{storyId}/chapters
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters/*").permitAll() // GET /api/stories/{storyId}/chapters/{chapterId}
                         .requestMatchers(HttpMethod.GET, "/api/chapters/latest").permitAll() // GET /api/chapters/latest
+                        // Chapter CUD operations - requires ADMIN or MODERATOR role
+                        .requestMatchers(HttpMethod.POST, "/api/stories/*/chapters").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/stories/*/chapters/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/stories/*/chapters/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/stories/*/chapters/**").hasAnyRole("ADMIN", "MODERATOR")
                         // Public stats endpoints - no token required
                         .requestMatchers(HttpMethod.GET, "/api/stats/summary").permitAll() // GET /api/stats/summary
                         // Public rating/comment read endpoints - no token required
@@ -75,10 +91,20 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/comments/story/*").permitAll() // GET comments for a story
                         .requestMatchers(HttpMethod.GET, "/api/comments/story/*/count").permitAll() // GET comment count
                         .requestMatchers(HttpMethod.GET, "/api/comments/*").permitAll() // GET single comment
+                        // Admin/Moderator rating and comment management - requires ADMIN or MODERATOR role
+                        .requestMatchers("/api/ratings/admin/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers("/api/comments/admin/**").hasAnyRole("ADMIN", "MODERATOR")
                         // Export endpoints - requires authentication but allows all roles
                         .requestMatchers(HttpMethod.GET, "/api/export/*/epub").authenticated() // GET /api/export/{storyId}/epub
                         // Cloudinary upload endpoint - requires ADMIN or MODERATOR role
                         .requestMatchers(HttpMethod.POST, "/api/cloudinary/upload").hasAnyRole("ADMIN", "MODERATOR")
+                        // Crawl endpoints (except health) - requires ADMIN or MODERATOR role
+                        .requestMatchers(HttpMethod.POST, "/api/crawl/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/crawl/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/crawl/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/crawl/**").hasAnyRole("ADMIN", "MODERATOR")
+                        // Crawl job endpoints - requires ADMIN or MODERATOR role
+                        .requestMatchers("/api/jobs/**").hasAnyRole("ADMIN", "MODERATOR")
                         // Admin endpoints require ADMIN role (handled by @PreAuthorize, but adding explicit rule for clarity)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // All other endpoints require authentication
