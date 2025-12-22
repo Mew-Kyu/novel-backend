@@ -11,6 +11,8 @@ public record CrawlJobDto(
     Integer attempts,
     String errorMessage,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt
+    LocalDateTime updatedAt,
+    Long createdBy,
+    Long lastModifiedBy
 ) {}
 

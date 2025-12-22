@@ -50,6 +50,15 @@ public record StoryDto(
     @Schema(description = "Creation timestamp", example = "2025-12-13T10:00:00")
     LocalDateTime createdAt,
 
+    @Schema(description = "Last update timestamp", example = "2025-12-13T15:30:00")
+    LocalDateTime updatedAt,
+
+    @Schema(description = "ID of user who created this story", example = "1")
+    Long createdBy,
+
+    @Schema(description = "ID of user who last modified this story", example = "2")
+    Long lastModifiedBy,
+
     @Schema(description = "Story publication status", example = "PUBLISHED")
     StoryStatus status,
 

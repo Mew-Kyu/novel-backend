@@ -1,8 +1,10 @@
 package com.graduate.novel.domain.story;
 
+import com.graduate.novel.domain.base.BaseEntity;
 import com.graduate.novel.domain.genre.Genre;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -14,8 +16,8 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Story {
+@SuperBuilder
+public class Story extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -72,11 +74,6 @@ public class Story {
     @Builder.Default
     private Set<Genre> genres = new HashSet<>();
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 
     @Column(name = "view_count")
     @Builder.Default
@@ -101,8 +98,6 @@ public class Story {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
         if (sourceSite == null) {
             sourceSite = "syosetu";
         }
@@ -115,11 +110,6 @@ public class Story {
         if (status == null) {
             status = StoryStatus.PUBLISHED;
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 }
 

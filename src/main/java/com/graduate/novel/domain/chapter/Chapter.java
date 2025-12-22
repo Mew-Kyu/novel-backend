@@ -1,8 +1,10 @@
 package com.graduate.novel.domain.chapter;
 
+import com.graduate.novel.domain.base.BaseEntity;
 import com.graduate.novel.domain.story.Story;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,8 +13,8 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Chapter {
+@SuperBuilder
+public class Chapter extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -55,26 +57,13 @@ public class Chapter {
     @Column(name = "translate_time")
     private LocalDateTime translateTime;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
         if (crawlStatus == null) {
             crawlStatus = "PENDING";
         }
         if (translateStatus == null) {
             translateStatus = "NONE";
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 }

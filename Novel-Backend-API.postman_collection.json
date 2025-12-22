@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "novel-backend-api-collection",
 		"name": "Novel Backend API",
-		"description": "Complete API collection for Novel Backend application with Role-Based Access Control (RBAC).\n\n## Roles:\n- **ADMIN**: Full access to all features including user/role management\n- **MODERATOR**: Can manage content (stories, chapters, genres) and moderate comments\n- **USER**: Can read content, create comments/ratings, manage own data\n- **PUBLIC**: Read-only access to stories, chapters, genres\n\n## Authentication:\n1. Register or login to get JWT token\n2. Token is automatically saved to collection variables\n3. All authenticated requests use the bearer token\n\n## Admin Endpoints:\n- Require ADMIN role\n- User management: activate/deactivate, assign/remove roles\n- Role management: create, update, delete custom roles\n- Statistics and monitoring\n\n## Testing:\n1. Create users with different roles (USER, MODERATOR, ADMIN)\n2. Login with each role to test different access levels\n3. Admin endpoints are in separate folders",
+		"description": "Complete API collection for Novel Backend application with Role-Based Access Control (RBAC).\n\n## Roles:\n- **ADMIN**: Full access to all features including user/role management\n- **MODERATOR**: Can manage content (stories, chapters, genres) and moderate comments\n- **USER**: Can read content, create comments/ratings, manage own data\n- **PUBLIC**: Read-only access to stories, chapters, genres\n\n## Authentication:\n1. Register or login to get JWT token\n2. Token is automatically saved to collection variables\n3. All authenticated requests use the bearer token\n\n## JPA Auditing Feature (NEW - December 2025)\n✨ **All responses now include audit fields tracking who created/modified data:**\n- `createdBy`: User ID who created the resource (null for system operations)\n- `createdAt`: ISO 8601 timestamp when resource was created\n- `lastModifiedBy`: User ID who last modified the resource (null for system operations)\n- `updatedAt`: ISO 8601 timestamp when resource was last updated\n\n**Audited Entities:**\n- Stories: CREATE → audit fields set automatically\n- Chapters: CREATE/UPDATE → audit fields managed automatically  \n- CrawlJobs: Created automatically for crawl operations\n\n**Example Response (Create Story):**\n```json\n{\n  \"id\": 1,\n  \"title\": \"My Novel\",\n  \"authorName\": \"Author\",\n  \"createdBy\": 123,\n  \"createdAt\": \"2025-12-22T10:00:00\",\n  \"lastModifiedBy\": 123,\n  \"updatedAt\": \"2025-12-22T10:00:00\"\n}\n```\n\n**Security:**\n- `createdBy` and `lastModifiedBy` are automatically captured from Spring Security context\n- System/background operations have null user IDs (gracefully handled)\n- Timestamps are server-side managed (cannot be spoofed by client)\n- No code changes needed - works automatically!\n\n## Admin Endpoints:\n- Require ADMIN role\n- User management: activate/deactivate, assign/remove roles\n- Role management: create, update, delete custom roles\n- Statistics and monitoring\n\n## Testing:\n1. Create users with different roles (USER, MODERATOR, ADMIN)\n2. Login with each role to test different access levels\n3. Admin endpoints are in separate folders",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -416,7 +416,8 @@
 							"raw": "{{base_url}}/api/stories",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories"]
-						}
+						},
+						"description": "Create a new story. Requires ADMIN or MODERATOR role.\n\n**Response includes audit fields (JPA Auditing):**\n- `createdBy`: User ID who created the story\n- `createdAt`: Timestamp when story was created\n- `lastModifiedBy`: User ID who last modified the story\n- `updatedAt`: Timestamp when story was last updated"
 					},
 					"response": []
 				},
@@ -438,7 +439,8 @@
 							"raw": "{{base_url}}/api/stories/1",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "1"]
-						}
+						},
+						"description": "Update an existing story. Requires ADMIN or MODERATOR role.\n\n**Audit Fields Behavior (JPA Auditing):**\n- `createdBy`: Unchanged (immutable)\n- `createdAt`: Unchanged (immutable)\n- `lastModifiedBy`: Updated to current user ID\n- `updatedAt`: Updated to current timestamp"
 					},
 					"response": []
 				},
@@ -748,7 +750,8 @@
 							"raw": "{{base_url}}/api/stories/1/chapters",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "1", "chapters"]
-						}
+						},
+						"description": "Create a new chapter for a story. Requires ADMIN or MODERATOR role.\n\n**Response includes audit fields (JPA Auditing):**\n- `createdBy`: User ID who created the chapter\n- `createdAt`: Timestamp when chapter was created\n- `lastModifiedBy`: User ID who last modified the chapter\n- `updatedAt`: Timestamp when chapter was last updated"
 					},
 					"response": []
 				},
@@ -770,7 +773,8 @@
 							"raw": "{{base_url}}/api/stories/1/chapters/1",
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "1", "chapters", "1"]
-						}
+						},
+						"description": "Update an existing chapter. Requires ADMIN or MODERATOR role.\n\n**Audit Fields Behavior (JPA Auditing):**\n- `createdBy`: Unchanged (immutable)\n- `createdAt`: Unchanged (immutable)\n- `lastModifiedBy`: Updated to current user ID\n- `updatedAt`: Updated to current timestamp"
 					},
 					"response": []
 				},

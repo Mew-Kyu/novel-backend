@@ -15,5 +15,8 @@ public record ChapterDto(
     String translatedContent,
     String translateStatus,
     LocalDateTime translateTime,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    LocalDateTime updatedAt,
+    Long createdBy,
+    Long lastModifiedBy
 ) {}
