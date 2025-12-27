@@ -78,7 +78,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters").permitAll() // GET /api/stories/{storyId}/chapters
                         .requestMatchers(HttpMethod.GET, "/api/stories/*/chapters/*").permitAll() // GET /api/stories/{storyId}/chapters/{chapterId}
                         .requestMatchers(HttpMethod.GET, "/api/chapters/latest").permitAll() // GET /api/chapters/latest
-                        // Chapter CUD operations - requires ADMIN or MODERATOR role
+                        // Chapter CUD operations - authenticated required (ownership check in controller)
                         .requestMatchers(HttpMethod.POST, "/api/stories/*/chapters").hasAnyRole("ADMIN", "MODERATOR")
                         .requestMatchers(HttpMethod.PUT, "/api/stories/*/chapters/**").hasAnyRole("ADMIN", "MODERATOR")
                         .requestMatchers(HttpMethod.PATCH, "/api/stories/*/chapters/**").hasAnyRole("ADMIN", "MODERATOR")

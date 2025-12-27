@@ -48,7 +48,7 @@ public class ChapterController {
     }
 
     @PutMapping("/{chapterId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
     public ResponseEntity<ChapterDto> updateChapter(
             @PathVariable Long storyId,
             @PathVariable Long chapterId,
@@ -59,7 +59,7 @@ public class ChapterController {
     }
 
     @DeleteMapping("/{chapterId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
     public ResponseEntity<Void> deleteChapter(
             @PathVariable Long storyId,
             @PathVariable Long chapterId
@@ -69,7 +69,7 @@ public class ChapterController {
     }
 
     @PatchMapping("/{chapterId}/raw-content")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
     public ResponseEntity<ChapterDto> updateRawContent(
             @PathVariable Long storyId,
             @PathVariable Long chapterId,
@@ -81,7 +81,7 @@ public class ChapterController {
     }
 
     @PatchMapping("/{chapterId}/translation")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
     public ResponseEntity<ChapterDto> updateTranslation(
             @PathVariable Long storyId,
             @PathVariable Long chapterId,
@@ -92,8 +92,9 @@ public class ChapterController {
     }
 
     @PatchMapping("/{chapterId}/crawl-status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
     public ResponseEntity<Void> updateCrawlStatus(
+            @PathVariable Long storyId,
             @PathVariable Long chapterId,
             @RequestBody Map<String, String> body
     ) {
@@ -104,8 +105,9 @@ public class ChapterController {
     }
 
     @PatchMapping("/{chapterId}/translate-status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
     public ResponseEntity<Void> updateTranslateStatus(
+            @PathVariable Long storyId,
             @PathVariable Long chapterId,
             @RequestBody Map<String, String> body
     ) {
@@ -119,7 +121,7 @@ public class ChapterController {
      * Automatically translate a chapter using AI
      */
     @PostMapping("/{chapterId}/translate")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
     public ResponseEntity<ChapterDto> translateChapter(
             @PathVariable Long storyId,
             @PathVariable Long chapterId
@@ -132,7 +134,7 @@ public class ChapterController {
      * Translate all untranslated chapters for a story
      */
     @PostMapping("/translate-all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyStory(authentication, #storyId))")
     public ResponseEntity<Map<String, String>> translateAllChapters(@PathVariable Long storyId) {
         // Run in background to avoid timeout
         new Thread(() -> chapterService.translateAllChaptersForStory(storyId)).start();
@@ -148,7 +150,7 @@ public class ChapterController {
      * Retry failed translations
      */
     @PostMapping("/retry-failed-translations")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyStory(authentication, #storyId))")
     public ResponseEntity<Map<String, String>> retryFailedTranslations(@PathVariable Long storyId) {
         new Thread(() -> chapterService.retryFailedTranslations(storyId)).start();
 

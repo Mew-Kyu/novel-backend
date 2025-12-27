@@ -190,7 +190,7 @@ public class StoryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyStory(authentication, #id))")
     public ResponseEntity<Void> deleteStory(@PathVariable Long id) {
         storyService.deleteStory(id);
         return ResponseEntity.noContent().build();
@@ -243,10 +243,10 @@ public class StoryController {
     }
 
     @PutMapping("/{storyId}/genres")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyStory(authentication, #storyId))")
     @Operation(
             summary = "Set all genres for a story",
-            description = "Replace all existing genres with a new set of genres. Send an empty array to remove all genres. Requires ADMIN or MODERATOR role.",
+            description = "Replace all existing genres with a new set of genres. Send an empty array to remove all genres. ADMIN can modify any story. MODERATOR can only modify stories they created.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -254,7 +254,7 @@ public class StoryController {
                     content = @Content(schema = @Schema(implementation = StoryDto.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request body"),
             @ApiResponse(responseCode = "401", description = "Unauthorized"),
-            @ApiResponse(responseCode = "403", description = "Forbidden - requires ADMIN or MODERATOR role"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - requires ADMIN role or story ownership"),
             @ApiResponse(responseCode = "404", description = "Story or genre not found")
     })
     public ResponseEntity<StoryDto> setGenresForStory(
@@ -302,7 +302,7 @@ public class StoryController {
      * Translate story title and description by story ID (translate both by default)
      */
     @PostMapping("/translate/story/{storyId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MODERATOR')")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyStory(authentication, #storyId))")
     public ResponseEntity<TranslateStoryResponse> translateStoryById(@PathVariable Long storyId) {
         log.info("Translating story id: {} (both title and description)", storyId);
 

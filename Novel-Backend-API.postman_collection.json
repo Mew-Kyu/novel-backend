@@ -917,7 +917,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "stories", "1", "chapters", "retry-failed-translations"]
 						},
-						"description": "Retry translating chapters that previously failed.\n\n**What it does:**\n- Finds all chapters with `translateStatus: FAILED`\n- Attempts to translate them again (title + content)\n- Updates status based on result\n\n**Use case:** If translation failed due to rate limiting or temporary API issues, this retries those chapters."
+						"description": "Retry translating chapters that previously failed.\n\n**Authorization:**\n- ADMIN: Can retry for any story\n- MODERATOR: Can only retry for stories they created\n- Others: 403 Forbidden\n\n**What it does:**\n- Finds all chapters with `translateStatus: FAILED`\n- Attempts to translate them again (title + content)\n- Updates status based on result\n\n**Use case:** If translation failed due to rate limiting or temporary API issues, this retries those chapters."
 					},
 					"response": []
 				}
