@@ -37,13 +37,20 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
                         @Param("embeddingString") String embeddingString);
 
     // Semantic search using cosine similarity (1 - cosine distance)
-   // queryEmbedding should be in format: "[0.1,0.2,0.3,...]"
-    @Query(value = "SELECT * FROM stories " +
+    // queryEmbedding should be in format: "[0.1,0.2,0.3,...]"
+    // Note: We need to use a two-step approach:
+    // 1. Find story IDs using native query (for vector operations)
+    // 2. Fetch full stories with genres using JPQL (for proper JOIN FETCH)
+    @Query(value = "SELECT id FROM stories " +
             "WHERE embedding IS NOT NULL " +
             "ORDER BY embedding <=> CAST(:queryEmbedding AS vector) " +
             "LIMIT :limit", nativeQuery = true)
-    List<Story> findBySimilarity(@Param("queryEmbedding") String queryEmbedding,
-                                  @Param("limit") int limit);
+    List<Long> findStoryIdsBySimilarity(@Param("queryEmbedding") String queryEmbedding,
+                                        @Param("limit") int limit);
+
+    // Fetch stories by IDs with genres eagerly loaded
+    @Query("SELECT DISTINCT s FROM Story s LEFT JOIN FETCH s.genres WHERE s.id IN :ids")
+    List<Story> findByIdInWithGenres(@Param("ids") List<Long> ids);
 
     // Homepage features
 

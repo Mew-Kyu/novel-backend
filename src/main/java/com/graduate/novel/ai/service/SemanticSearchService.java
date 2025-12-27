@@ -134,8 +134,16 @@ public class SemanticSearchService {
         // Convert to PostgreSQL vector format string
         String queryEmbeddingString = convertFloatArrayToVectorString(queryEmbedding);
 
-        // Perform similarity search using cosine distance
-        List<Story> results = storyRepository.findBySimilarity(queryEmbeddingString, limit);
+        // Step 1: Find story IDs using vector similarity (native query required for vector operations)
+        List<Long> storyIds = storyRepository.findStoryIdsBySimilarity(queryEmbeddingString, limit);
+
+        if (storyIds.isEmpty()) {
+            log.info("No similar stories found");
+            return List.of();
+        }
+
+        // Step 2: Fetch full Story entities with genres eagerly loaded to avoid lazy initialization error
+        List<Story> results = storyRepository.findByIdInWithGenres(storyIds);
 
         log.info("Found {} similar stories", results.size());
         return results;
