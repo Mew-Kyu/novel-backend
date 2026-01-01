@@ -6,6 +6,7 @@ public record CommentDto(
         Long id,
         Long userId,
         String userName,
+        String userAvatarUrl,
         Long storyId,
         String content,
         LocalDateTime createdAt,

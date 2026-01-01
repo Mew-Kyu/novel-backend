@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "novel-backend-api-collection",
 		"name": "Novel Backend API",
-		"description": "Complete API collection for Novel Backend application with Role-Based Access Control (RBAC).\n\n## Roles:\n- **ADMIN**: Full access to all features including user/role management\n- **MODERATOR**: Can manage content (stories, chapters, genres) and moderate comments\n- **USER**: Can read content, create comments/ratings, manage own data\n- **PUBLIC**: Read-only access to stories, chapters, genres\n\n## Authentication:\n1. Register or login to get JWT token\n2. Token is automatically saved to collection variables\n3. All authenticated requests use the bearer token\n\n## JPA Auditing Feature (NEW - December 2025)\n✨ **All responses now include audit fields tracking who created/modified data:**\n- `createdBy`: User ID who created the resource (null for system operations)\n- `createdAt`: ISO 8601 timestamp when resource was created\n- `lastModifiedBy`: User ID who last modified the resource (null for system operations)\n- `updatedAt`: ISO 8601 timestamp when resource was last updated\n\n**Audited Entities:**\n- Stories: CREATE → audit fields set automatically\n- Chapters: CREATE/UPDATE → audit fields managed automatically  \n- CrawlJobs: Created automatically for crawl operations\n\n**Example Response (Create Story):**\n```json\n{\n  \"id\": 1,\n  \"title\": \"My Novel\",\n  \"authorName\": \"Author\",\n  \"createdBy\": 123,\n  \"createdAt\": \"2025-12-22T10:00:00\",\n  \"lastModifiedBy\": 123,\n  \"updatedAt\": \"2025-12-22T10:00:00\"\n}\n```\n\n**Security:**\n- `createdBy` and `lastModifiedBy` are automatically captured from Spring Security context\n- System/background operations have null user IDs (gracefully handled)\n- Timestamps are server-side managed (cannot be spoofed by client)\n- No code changes needed - works automatically!\n\n## Admin Endpoints:\n- Require ADMIN role\n- User management: activate/deactivate, assign/remove roles\n- Role management: create, update, delete custom roles\n- Statistics and monitoring\n\n## Testing:\n1. Create users with different roles (USER, MODERATOR, ADMIN)\n2. Login with each role to test different access levels\n3. Admin endpoints are in separate folders",
+		"description": "Complete API collection for Novel Backend application with Role-Based Access Control (RBAC).\n\n## Roles:\n- **ADMIN**: Full access to all features including user/role management\n- **MODERATOR**: Can manage content (stories, chapters, genres) and moderate comments\n- **USER**: Can read content, create comments/ratings, manage own data\n- **PUBLIC**: Read-only access to stories, chapters, genres\n\n**Note:** Each user can only have ONE role at a time.\n\n## Authentication:\n1. Register or login to get JWT token\n2. Token is automatically saved to collection variables\n3. All authenticated requests use the bearer token\n\n## JPA Auditing Feature (NEW - December 2025)\n✨ **All responses now include audit fields tracking who created/modified data:**\n- `createdBy`: User ID who created the resource (null for system operations)\n- `createdAt`: ISO 8601 timestamp when resource was created\n- `lastModifiedBy`: User ID who last modified the resource (null for system operations)\n- `updatedAt`: ISO 8601 timestamp when resource was last updated\n\n**Audited Entities:**\n- Stories: CREATE → audit fields set automatically\n- Chapters: CREATE/UPDATE → audit fields managed automatically  \n- CrawlJobs: Created automatically for crawl operations\n\n**Example Response (Create Story):**\n```json\n{\n  \"id\": 1,\n  \"title\": \"My Novel\",\n  \"authorName\": \"Author\",\n  \"createdBy\": 123,\n  \"createdAt\": \"2025-12-22T10:00:00\",\n  \"lastModifiedBy\": 123,\n  \"updatedAt\": \"2025-12-22T10:00:00\"\n}\n```\n\n**Security:**\n- `createdBy` and `lastModifiedBy` are automatically captured from Spring Security context\n- System/background operations have null user IDs (gracefully handled)\n- Timestamps are server-side managed (cannot be spoofed by client)\n- No code changes needed - works automatically!\n\n## Admin Endpoints:\n- Require ADMIN role\n- User management: activate/deactivate, update user roles\n- Role management: create, update, delete custom roles\n- Statistics and monitoring\n\n## Testing:\n1. Create users with different roles (USER, MODERATOR, ADMIN)\n2. Login with each role to test different access levels\n3. Admin endpoints are in separate folders",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -94,7 +94,7 @@
 									"    var jsonData = pm.response.json();",
 									"    pm.collectionVariables.set(\"jwt_token\", jsonData.accessToken);",
 									"    console.log(\"JWT Token saved:\", jsonData.accessToken);",
-									"    console.log(\"User roles:\", jsonData.user.roles);",
+									"    console.log(\"User role:\", jsonData.user.role);",
 									"}"
 								],
 								"type": "text/javascript"
@@ -121,7 +121,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "auth", "login"]
 						},
-						"description": "Login and automatically save JWT token to collection variables. Response includes user info with roles."
+						"description": "Login and automatically save JWT token to collection variables. Response includes user info with role."
 					},
 					"response": []
 				}
@@ -1687,30 +1687,23 @@
 					"response": []
 				},
 				{
-					"name": "Assign Role to User",
+					"name": "Update User Role",
 					"request": {
-						"method": "POST",
+						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/admin/users/2/roles/MODERATOR",
+							"raw": "{{base_url}}/api/admin/users/2/role?roleName=MODERATOR",
 							"host": ["{{base_url}}"],
-							"path": ["api", "admin", "users", "2", "roles", "MODERATOR"]
+							"path": ["api", "admin", "users", "2", "role"],
+							"query": [
+								{
+									"key": "roleName",
+									"value": "MODERATOR",
+									"description": "New role for the user. Available: ADMIN, MODERATOR, USER"
+								}
+							]
 						},
-						"description": "Assign a role to a user. Available roles: ADMIN, MODERATOR, USER (Admin only)"
-					},
-					"response": []
-				},
-				{
-					"name": "Remove Role from User",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/api/admin/users/2/roles/MODERATOR",
-							"host": ["{{base_url}}"],
-							"path": ["api", "admin", "users", "2", "roles", "MODERATOR"]
-						},
-						"description": "Remove a role from a user. Cannot remove your own ADMIN role. User must have at least one role. (Admin only)"
+						"description": "Update a user's role. Each user can only have one role. Cannot remove your own ADMIN role. (Admin only)\n\nAvailable roles: ADMIN, MODERATOR, USER"
 					},
 					"response": []
 				},
@@ -2293,7 +2286,400 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "User Profile & Password Management",
+			"description": "Endpoints for user profile management, password changes, and password reset via email",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/user/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "profile"]
+						},
+						"description": "**Get Current User Profile**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** Any authenticated user\n\n**Response:**\n```json\n{\n  \"id\": 1,\n  \"email\": \"user@example.com\",\n  \"displayName\": \"John Doe\",\n  \"avatarUrl\": \"https://res.cloudinary.com/.../avatar.webp\",\n  \"createdAt\": \"2025-12-30T10:00:00\",\n  \"active\": true,\n  \"roles\": [\"USER\"]\n}\n```\n\n**Note:** avatarUrl will be null if user hasn't uploaded an avatar"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"displayName\": \"New Display Name\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "profile"]
+						},
+						"description": "**Update Current User Profile**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** Any authenticated user\n\n**Request Body:**\n```json\n{\n  \"displayName\": \"New Display Name\"\n}\n```\n\n**Response:**\n- User profile with updated information\n- Email notification sent to user\n\n**Validation:**\n- displayName: required, 1-255 characters"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Avatar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/avatar",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "avatar"]
+						},
+						"description": "**Upload or Update User Avatar**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** Any authenticated user\n\n**Request:**\n- Content-Type: multipart/form-data\n- Field name: file\n- File type: Image (jpg, png, gif, webp, etc.)\n- Max size: 5MB\n\n**Response:**\n```json\n{\n  \"id\": 1,\n  \"email\": \"user@example.com\",\n  \"displayName\": \"John Doe\",\n  \"avatarUrl\": \"https://res.cloudinary.com/.../avatar.webp\",\n  \"createdAt\": \"2025-12-30T10:00:00\",\n  \"active\": true,\n  \"roles\": [\"USER\"]\n}\n```\n\n**Features:**\n- Image automatically converted to WebP format\n- Resized to 400x400 pixels\n- Face detection and centering applied\n- Stored in Cloudinary cloud storage\n- Replaces existing avatar if present\n\n**Validation:**\n- File must be an image\n- Maximum file size: 5MB\n\n**Errors:**\n- 400: File is required\n- 400: File must be an image\n- 400: File size exceeds 5MB"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Avatar",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/user/avatar",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "avatar"]
+						},
+						"description": "**Delete User Avatar**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** Any authenticated user\n\n**Response:**\n```json\n{\n  \"id\": 1,\n  \"email\": \"user@example.com\",\n  \"displayName\": \"John Doe\",\n  \"avatarUrl\": null,\n  \"createdAt\": \"2025-12-30T10:00:00\",\n  \"active\": true,\n  \"roles\": [\"USER\"]\n}\n```\n\n**Features:**\n- Removes avatar URL from user profile\n- Returns updated user profile\n- User can only delete their own avatar\n\n**Errors:**\n- 400: User does not have an avatar to delete"
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"oldPassword123\",\n  \"newPassword\": \"newPassword456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/change-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "change-password"]
+						},
+						"description": "**Change User Password**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** Any authenticated user\n\n**Request Body:**\n```json\n{\n  \"currentPassword\": \"oldPassword123\",\n  \"newPassword\": \"newPassword456\"\n}\n```\n\n**Response:**\n```json\n{\n  \"message\": \"Password changed successfully\"\n}\n```\n\n**Features:**\n- Verifies current password before change\n- Email notification sent after change\n- New password must be at least 6 characters\n\n**Errors:**\n- 400: Current password is incorrect\n- 400: New password too short"
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "forgot-password"]
+						},
+						"description": "**Request Password Reset**\n\n**Authentication:** Not required (public endpoint)\n\n**Request Body:**\n```json\n{\n  \"email\": \"user@example.com\"\n}\n```\n\n**Response:**\n```json\n{\n  \"message\": \"If an account with that email exists, a password reset link has been sent\"\n}\n```\n\n**Features:**\n- Sends email with password reset token\n- Token expires in 1 hour\n- Token can only be used once\n- Security: Same response whether email exists or not\n\n**Email Content:**\n- Reset link with token\n- Expiration time\n- Instructions"
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"your-reset-token-from-email\",\n  \"newPassword\": \"newSecurePassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "reset-password"]
+						},
+						"description": "**Reset Password with Token**\n\n**Authentication:** Not required (public endpoint)\n\n**Request Body:**\n```json\n{\n  \"token\": \"uuid-from-email\",\n  \"newPassword\": \"newSecurePassword123\"\n}\n```\n\n**Response:**\n```json\n{\n  \"message\": \"Password reset successfully\"\n}\n```\n\n**Features:**\n- Uses token from forgot password email\n- Token must be valid and not expired\n- Token can only be used once\n- Email notification sent after reset\n\n**Errors:**\n- 400: Invalid or expired token\n- 400: Token already used\n- 400: New password too short (min 6 chars)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin - User Management (Extended)",
+			"description": "Extended admin capabilities for user account management",
+			"item": [
+				{
+					"name": "Delete User Account",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/:userId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", ":userId"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "2",
+									"description": "ID of the user to delete"
+								}
+							]
+						},
+						"description": "**Delete User Account (Admin)**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** ADMIN only\n\n**Response:** 204 No Content\n\n**Features:**\n- Permanently deletes user account\n- Deletes all associated password reset tokens\n- Admin cannot delete their own account (safety check)\n\n**Errors:**\n- 400: Cannot delete your own account\n- 404: User not found\n- 403: Requires ADMIN role"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Reset User Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newPassword\": \"temporaryPassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/:userId/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", ":userId", "reset-password"],
+							"variable": [
+								{
+									"key": "userId",
+									"value": "2",
+									"description": "ID of the user whose password to reset"
+								}
+							]
+						},
+						"description": "**Admin Reset User Password**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** ADMIN only\n\n**Request Body:**\n```json\n{\n  \"newPassword\": \"temporaryPassword123\"\n}\n```\n\n**Response:**\n```json\n{\n  \"message\": \"Password reset successfully\",\n  \"temporaryPassword\": \"temporaryPassword123\"\n}\n```\n\n**Features:**\n- Admin can reset any user's password\n- Email sent to user with temporary password\n- User should change password immediately\n- All existing password reset tokens deleted\n\n**Use Cases:**\n- User locked out of account\n- Security incident response\n- Account recovery"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Email",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/search/email?email=test",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "search", "email"],
+							"query": [
+								{
+									"key": "email",
+									"value": "test",
+									"description": "Search email (case-insensitive, contains)"
+								},
+								{
+									"key": "page",
+									"value": "0",
+									"description": "Page number (0-indexed)",
+									"disabled": true
+								},
+								{
+									"key": "size",
+									"value": "20",
+									"description": "Page size",
+									"disabled": true
+								}
+							]
+						},
+						"description": "**Search Users by Email**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** ADMIN only\n\n**Query Parameters:**\n- `email` (required): Email search term (contains, case-insensitive)\n- `page` (optional): Page number (default: 0)\n- `size` (optional): Page size (default: 20)\n- `sort` (optional): Sort field (default: createdAt,desc)\n\n**Response:** Paginated list of users\n\n**Example:**\n- `/api/admin/users/search/email?email=test@` → finds all emails containing \"test@\"\n- `/api/admin/users/search/email?email=john&page=1&size=10` → second page with 10 results"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Display Name",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/search/name?displayName=john",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "search", "name"],
+							"query": [
+								{
+									"key": "displayName",
+									"value": "john",
+									"description": "Search display name (case-insensitive, contains)"
+								},
+								{
+									"key": "page",
+									"value": "0",
+									"description": "Page number",
+									"disabled": true
+								},
+								{
+									"key": "size",
+									"value": "20",
+									"description": "Page size",
+									"disabled": true
+								}
+							]
+						},
+						"description": "**Search Users by Display Name**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** ADMIN only\n\n**Query Parameters:**\n- `displayName` (required): Display name search term (contains, case-insensitive)\n- `page` (optional): Page number\n- `size` (optional): Page size\n\n**Response:** Paginated list of users"
+					},
+					"response": []
+				},
+				{
+					"name": "Filter by Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/filter/status?active=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "filter", "status"],
+							"query": [
+								{
+									"key": "active",
+									"value": "true",
+									"description": "true for active, false for inactive"
+								},
+								{
+									"key": "page",
+									"value": "0",
+									"description": "Page number",
+									"disabled": true
+								},
+								{
+									"key": "size",
+									"value": "20",
+									"description": "Page size",
+									"disabled": true
+								}
+							]
+						},
+						"description": "**Filter Users by Active Status**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** ADMIN only\n\n**Query Parameters:**\n- `active` (required): true for active users, false for inactive\n- `page` (optional): Page number\n- `size` (optional): Page size\n\n**Response:** Paginated list of users\n\n**Example:**\n- `/api/admin/users/filter/status?active=true` → all active users\n- `/api/admin/users/filter/status?active=false` → all inactive users"
+					},
+					"response": []
+				},
+				{
+					"name": "Search by Keyword",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/search/keyword?keyword=john",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "search", "keyword"],
+							"query": [
+								{
+									"key": "keyword",
+									"value": "john",
+									"description": "Search in email OR display name (case-insensitive)"
+								},
+								{
+									"key": "page",
+									"value": "0",
+									"description": "Page number",
+									"disabled": true
+								},
+								{
+									"key": "size",
+									"value": "20",
+									"description": "Page size",
+									"disabled": true
+								}
+							]
+						},
+						"description": "**Search Users by Keyword (Email or Display Name)**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** ADMIN only\n\n**Query Parameters:**\n- `keyword` (required): Search term (searches both email and displayName, case-insensitive)\n- `page` (optional): Page number\n- `size` (optional): Page size\n\n**Response:** Paginated list of users\n\n**Example:**\n- `/api/admin/users/search/keyword?keyword=john` → finds \"john@...\" emails and display names with \"john\""
+					},
+					"response": []
+				},
+				{
+					"name": "Advanced Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/admin/users/search/advanced?email=&displayName=&active=true",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users", "search", "advanced"],
+							"query": [
+								{
+									"key": "email",
+									"value": "",
+									"description": "Email search term (optional, case-insensitive, contains)",
+									"disabled": true
+								},
+								{
+									"key": "displayName",
+									"value": "",
+									"description": "Display name search term (optional, case-insensitive, contains)",
+									"disabled": true
+								},
+								{
+									"key": "active",
+									"value": "true",
+									"description": "Active status filter (optional, true/false)",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "0",
+									"description": "Page number",
+									"disabled": true
+								},
+								{
+									"key": "size",
+									"value": "20",
+									"description": "Page size",
+									"disabled": true
+								}
+							]
+						},
+						"description": "**Advanced Search with Multiple Filters**\n\n**Authentication:** Required (JWT Bearer token)\n**Role:** ADMIN only\n\n**Query Parameters (all optional):**\n- `email`: Email search term (contains, case-insensitive)\n- `displayName`: Display name search term (contains, case-insensitive)\n- `active`: Active status (true/false)\n- `page`: Page number (default: 0)\n- `size`: Page size (default: 20)\n\n**Behavior:**\n- All filters are optional and combined with AND logic\n- Leave parameters empty or omit them to ignore the filter\n\n**Examples:**\n- `/api/admin/users/search/advanced?email=test` → active=true by default? No! Only email filter\n- `/api/admin/users/search/advanced?email=test&active=true` → active users with \"test\" in email\n- `/api/admin/users/search/advanced?displayName=john&active=false` → inactive users with \"john\" in display name\n- `/api/admin/users/search/advanced?email=test&displayName=admin&active=true` → active users matching all 3 criteria"
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }
+
+
 

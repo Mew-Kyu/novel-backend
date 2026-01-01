@@ -8,9 +8,11 @@ import com.graduate.novel.domain.role.RoleDto;
 import com.graduate.novel.domain.role.RoleService;
 import com.graduate.novel.domain.role.CreateRoleRequest;
 import com.graduate.novel.domain.role.UpdateRoleRequest;
+import com.graduate.novel.domain.user.AdminResetPasswordRequest;
 import com.graduate.novel.domain.user.User;
 import com.graduate.novel.domain.user.UserDto;
 import com.graduate.novel.domain.user.UserRepository;
+import com.graduate.novel.domain.user.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final RoleService roleService;
+    private final UserService userService;
 
     // ==================== USER MANAGEMENT ====================
 
@@ -103,65 +106,102 @@ public class AdminController {
         return ResponseEntity.ok(userMapper.toDto(user));
     }
 
-    // ==================== ROLE ASSIGNMENT ====================
+    // ==================== SEARCH & FILTER ====================
 
     /**
-     * Assign a role to a user
+     * Search users by email (contains)
      */
-    @PostMapping("/users/{userId}/roles/{roleName}")
-    public ResponseEntity<UserDto> assignRoleToUser(
-            @PathVariable Long userId,
-            @PathVariable String roleName) {
-        log.info("Admin assigning role {} to user {}", roleName, userId);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-
-        Role role = roleService.findByName(roleName);
-
-        if (user.hasRole(role.getName())) {
-            throw new BadRequestException("User already has role: " + roleName);
-        }
-
-        user.addRole(role);
-        user = userRepository.save(user);
-        log.info("Role {} assigned to user {} successfully", roleName, userId);
-
-        return ResponseEntity.ok(userMapper.toDto(user));
+    @GetMapping("/users/search/email")
+    public ResponseEntity<Page<UserDto>> searchByEmail(
+            @RequestParam String email,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Admin searching users by email: {}", email);
+        Page<User> users = userRepository.findByEmailContainingIgnoreCase(email, pageable);
+        Page<UserDto> userDtos = users.map(userMapper::toDto);
+        return ResponseEntity.ok(userDtos);
     }
 
     /**
-     * Remove a role from a user
+     * Search users by display name (contains)
      */
-    @DeleteMapping("/users/{userId}/roles/{roleName}")
-    public ResponseEntity<UserDto> removeRoleFromUser(
+    @GetMapping("/users/search/name")
+    public ResponseEntity<Page<UserDto>> searchByDisplayName(
+            @RequestParam String displayName,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Admin searching users by display name: {}", displayName);
+        Page<User> users = userRepository.findByDisplayNameContainingIgnoreCase(displayName, pageable);
+        Page<UserDto> userDtos = users.map(userMapper::toDto);
+        return ResponseEntity.ok(userDtos);
+    }
+
+    /**
+     * Filter users by active status
+     */
+    @GetMapping("/users/filter/status")
+    public ResponseEntity<Page<UserDto>> filterByStatus(
+            @RequestParam Boolean active,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Admin filtering users by status: {}", active);
+        Page<User> users = userRepository.findByActive(active, pageable);
+        Page<UserDto> userDtos = users.map(userMapper::toDto);
+        return ResponseEntity.ok(userDtos);
+    }
+
+    /**
+     * Search users by keyword (email or display name)
+     */
+    @GetMapping("/users/search/keyword")
+    public ResponseEntity<Page<UserDto>> searchByKeyword(
+            @RequestParam String keyword,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Admin searching users by keyword: {}", keyword);
+        Page<User> users = userRepository.searchByKeyword(keyword, pageable);
+        Page<UserDto> userDtos = users.map(userMapper::toDto);
+        return ResponseEntity.ok(userDtos);
+    }
+
+    /**
+     * Advanced search with multiple filters
+     */
+    @GetMapping("/users/search/advanced")
+    public ResponseEntity<Page<UserDto>> advancedSearch(
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String displayName,
+            @RequestParam(required = false) Boolean active,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Admin performing advanced search - email: {}, displayName: {}, active: {}", email, displayName, active);
+        Page<User> users = userRepository.advancedSearch(email, displayName, active, pageable);
+        Page<UserDto> userDtos = users.map(userMapper::toDto);
+        return ResponseEntity.ok(userDtos);
+    }
+
+    // ==================== ROLE ASSIGNMENT ====================
+
+    /**
+     * Update a user's role
+     */
+    @PutMapping("/users/{userId}/role")
+    public ResponseEntity<UserDto> updateUserRole(
             @AuthenticationPrincipal User currentUser,
             @PathVariable Long userId,
-            @PathVariable String roleName) {
-        log.info("Admin removing role {} from user {}", roleName, userId);
+            @RequestParam String roleName) {
+        log.info("Admin updating role for user {} to {}", userId, roleName);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
-        Role role = roleService.findByName(roleName);
+        Role newRole = roleService.findByName(roleName);
 
         // Prevent removing ADMIN role from self
-        if (currentUser.getId().equals(userId) && Role.ADMIN.equalsIgnoreCase(roleName)) {
+        if (currentUser.getId().equals(userId) &&
+            user.hasRole(Role.ADMIN) &&
+            !Role.ADMIN.equalsIgnoreCase(roleName)) {
             throw new BadRequestException("Cannot remove ADMIN role from your own account");
         }
 
-        if (!user.hasRole(role.getName())) {
-            throw new BadRequestException("User does not have role: " + roleName);
-        }
-
-        // Ensure user has at least one role
-        if (user.getRoles().size() <= 1) {
-            throw new BadRequestException("Cannot remove the last role from user. User must have at least one role.");
-        }
-
-        user.removeRole(role);
+        user.setRole(newRole);
         user = userRepository.save(user);
-        log.info("Role {} removed from user {} successfully", roleName, userId);
+        log.info("Role updated to {} for user {} successfully", roleName, userId);
 
         return ResponseEntity.ok(userMapper.toDto(user));
     }
@@ -218,6 +258,34 @@ public class AdminController {
         log.info("Admin deleting role: {}", roleId);
         roleService.deleteRole(roleId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Delete a user account
+     */
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<Void> deleteUser(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long userId) {
+        log.info("Admin {} deleting user: {}", currentUser.getEmail(), userId);
+        userService.deleteUser(userId, currentUser);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Reset user password (admin action)
+     */
+    @PostMapping("/users/{userId}/reset-password")
+    public ResponseEntity<Map<String, String>> resetUserPassword(
+            @AuthenticationPrincipal User currentUser,
+            @PathVariable Long userId,
+            @Valid @RequestBody AdminResetPasswordRequest request) {
+        log.info("Admin {} resetting password for user: {}", currentUser.getEmail(), userId);
+        String newPassword = userService.adminResetPassword(userId, request, currentUser);
+        return ResponseEntity.ok(Map.of(
+                "message", "Password reset successfully",
+                "temporaryPassword", newPassword
+        ));
     }
 
     // ==================== STATISTICS ====================

@@ -1,0 +1,50 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/noveldb?TimeZone=UTC
+    username: postgres
+    password: 123456
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+
+  flyway:
+    enabled: false
+
+  mail:
+    host: localhost
+    port: 1025
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+mail:
+  from: test@example.com
+
+jwt:
+  secret: TestSecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLongForHS256Algorithm
+  access-token-expiration: 86400000
+  refresh-token-expiration: 604800000
+
+cloudinary:
+  cloud-name: test-cloud
+  api-key: test-key
+  api-secret: test-secret
+
+gemini:
+  api:
+    key: test-key
+    base-url: https://generativelanguage.googleapis.com/v1beta
+
+app:
+  url: http://localhost:3000
+

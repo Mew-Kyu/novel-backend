@@ -50,5 +50,39 @@ public class CloudinaryService {
 
         return secureUrl;
     }
+
+    /**
+     * Uploads a user avatar to Cloudinary with automatic WebP conversion and optimization.
+     * Avatars are stored in the "user_avatars" folder with size constraints.
+     *
+     * @param file The avatar image file to upload
+     * @return The secure URL of the uploaded avatar
+     * @throws IOException If upload fails
+     */
+    @SuppressWarnings("unchecked")
+    public String uploadAvatar(MultipartFile file) throws IOException {
+        log.info("Uploading avatar to Cloudinary: {}", file.getOriginalFilename());
+
+        // Upload the file with WebP conversion, optimization and avatar-specific settings
+        Map<String, Object> uploadResult = (Map<String, Object>) cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "folder", "user_avatars",            // Store in user_avatars folder
+                        "format", "webp",                    // Auto-convert to WebP format
+                        "quality", "auto",                   // Automatic quality optimization
+                        "width", 400,                        // Resize to 400x400
+                        "height", 400,
+                        "crop", "fill",                      // Fill the area (may crop)
+                        "gravity", "face",                   // Focus on face if detected
+                        "resource_type", "image"             // Specify resource type as image
+                )
+        );
+
+        // Extract and return the secure URL
+        String secureUrl = (String) uploadResult.get("secure_url");
+        log.info("Avatar uploaded successfully: {}", secureUrl);
+
+        return secureUrl;
+    }
 }
 

@@ -5,6 +5,7 @@ import com.graduate.novel.common.mapper.UserMapper;
 import com.graduate.novel.domain.role.Role;
 import com.graduate.novel.domain.role.RoleRepository;
 import com.graduate.novel.security.JwtService;
+import com.graduate.novel.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,9 +13,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +25,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
+    private final EmailService emailService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -42,19 +41,19 @@ public class AuthService {
         Role role = roleRepository.findByName(roleName)
                 .orElseThrow(() -> new BadRequestException("Role not found: " + roleName));
 
-        Set<Role> roles = new HashSet<>();
-        roles.add(role);
-
         User user = User.builder()
                 .email(request.email())
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .displayName(request.displayName())
                 .active(true)
-                .roles(roles)
+                .role(role)
                 .build();
 
         user = userRepository.save(user);
         log.info("User registered successfully: {} with role: {}", user.getEmail(), roleName);
+
+        // Send welcome email
+        emailService.sendWelcomeEmail(user.getEmail(), user.getDisplayName());
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);

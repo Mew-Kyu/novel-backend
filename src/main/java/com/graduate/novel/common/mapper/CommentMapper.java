@@ -11,6 +11,7 @@ public interface CommentMapper {
 
     @Mapping(source = "user.id", target = "userId")
     @Mapping(source = "user.displayName", target = "userName")
+    @Mapping(source = "user.avatarUrl", target = "userAvatarUrl")
     @Mapping(source = "story.id", target = "storyId")
     CommentDto toDto(Comment comment);
 }

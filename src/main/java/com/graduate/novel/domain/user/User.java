@@ -9,9 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Collections;
 
 @Entity
 @Table(name = "users")
@@ -35,6 +33,9 @@ public class User implements UserDetails {
     @Column(name = "display_name", nullable = false, length = 255)
     private String displayName;
 
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
+    private String avatarUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -42,14 +43,9 @@ public class User implements UserDetails {
     @Builder.Default
     private Boolean active = true;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    @Builder.Default
-    private Set<Role> roles = new HashSet<>();
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @PrePersist
     protected void onCreate() {
@@ -59,9 +55,10 @@ public class User implements UserDetails {
     // UserDetails implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
-                .collect(Collectors.toSet());
+        if (role == null) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.getName()));
     }
 
     @Override
@@ -94,18 +91,9 @@ public class User implements UserDetails {
         return active != null && active;
     }
 
-    // Helper methods for role management
-    public void addRole(Role role) {
-        this.roles.add(role);
-    }
-
-    public void removeRole(Role role) {
-        this.roles.remove(role);
-    }
-
+    // Helper method for role checking
     public boolean hasRole(String roleName) {
-        return roles.stream()
-                .anyMatch(role -> role.getName().equalsIgnoreCase(roleName));
+        return role != null && role.getName().equalsIgnoreCase(roleName);
     }
 }
 
