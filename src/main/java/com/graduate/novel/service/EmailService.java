@@ -21,9 +21,12 @@ public class EmailService {
     @Value("${app.url:http://localhost:8080}")
     private String appUrl;
 
-    @Async
+    @Async("taskExecutor")
     public void sendEmail(String to, String subject, String body) {
         try {
+            log.info("Attempting to send email to: {} with subject: {}", to, subject);
+            log.debug("Email configuration - From: {}, Host: resend", fromEmail);
+
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(to);
@@ -33,11 +36,22 @@ public class EmailService {
             mailSender.send(message);
             log.info("Email sent successfully to: {}", to);
         } catch (Exception e) {
-            log.error("Failed to send email to: {}", to, e);
+            String errorMsg = e.getMessage();
+
+            // Check if it's a Resend testing mode restriction
+            if (errorMsg != null && errorMsg.contains("You can only send testing emails to your own email address")) {
+                log.warn("⚠️ Email not sent to: {} - Resend is in testing mode. To send to any email, verify a domain at resend.com/domains", to);
+                log.info("💡 For development: You can only send emails to your verified email address in Resend");
+            } else {
+                log.error("Failed to send email to: {}. Error: {}", to, errorMsg, e);
+            }
+
+            // Don't throw exception for async methods - just log the error
+            // This prevents cluttering logs with unnecessary stack traces
         }
     }
 
-    @Async
+    @Async("taskExecutor")
     public void sendWelcomeEmail(String to, String displayName) {
         String subject = "Welcome to Novel Platform!";
         String body = String.format(
@@ -51,7 +65,7 @@ public class EmailService {
         sendEmail(to, subject, body);
     }
 
-    @Async
+    @Async("taskExecutor")
     public void sendPasswordResetEmail(String to, String displayName, String resetToken) {
         String subject = "Password Reset Request";
         String resetLink = appUrl + "/reset-password?token=" + resetToken;
@@ -69,7 +83,7 @@ public class EmailService {
         sendEmail(to, subject, body);
     }
 
-    @Async
+    @Async("taskExecutor")
     public void sendPasswordChangedEmail(String to, String displayName) {
         String subject = "Password Changed Successfully";
         String body = String.format(
@@ -83,7 +97,7 @@ public class EmailService {
         sendEmail(to, subject, body);
     }
 
-    @Async
+    @Async("taskExecutor")
     public void sendProfileUpdatedEmail(String to, String displayName) {
         String subject = "Profile Updated Successfully";
         String body = String.format(
@@ -97,7 +111,7 @@ public class EmailService {
         sendEmail(to, subject, body);
     }
 
-    @Async
+    @Async("taskExecutor")
     public void sendPasswordResetByAdminEmail(String to, String displayName, String temporaryPassword) {
         String subject = "Your Password Has Been Reset by Administrator";
         String body = String.format(

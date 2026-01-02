@@ -1,6 +1,8 @@
 package com.graduate.novel.controller;
 
 import com.graduate.novel.domain.user.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import java.util.Map;
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "User Management", description = "User profile and password management endpoints")
 public class UserController {
 
     private final UserService userService;
@@ -57,6 +60,13 @@ public class UserController {
      * Forgot password - request password reset
      */
     @PostMapping("/forgot-password")
+    @Operation(
+        summary = "Request password reset",
+        description = "Send password reset email to user. " +
+                     "⚠️ **Email Testing Mode**: In Resend testing mode, emails only sent to verified addresses. " +
+                     "Check application logs for email delivery status. " +
+                     "To send to any email, verify a domain at https://resend.com/domains"
+    )
     public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         log.info("Forgot password request for email: {}", request.email());
         userService.forgotPassword(request);
