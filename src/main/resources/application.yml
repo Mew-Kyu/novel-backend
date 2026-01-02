@@ -101,4 +101,14 @@ gemini:
 
 app:
   url: ${APP_URL:http://localhost:3000}
+  featured-stories:
+    enabled: true
+    max-count: 10
+    min-days-since-update: 7
+    min-view-count: 100
+    min-rating: 3.5
+    view-count-weight: 0.4
+    rating-weight: 0.3
+    recency-weight: 0.3
+    cron-expression: "0 0 2 * * *"  # Daily at 2 AM
 

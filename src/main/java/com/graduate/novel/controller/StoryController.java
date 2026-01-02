@@ -4,6 +4,7 @@ import com.graduate.novel.ai.dto.TranslateStoryRequest;
 import com.graduate.novel.ai.dto.TranslateStoryResponse;
 import com.graduate.novel.ai.service.TranslationService;
 import com.graduate.novel.domain.story.*;
+import com.graduate.novel.scheduler.FeaturedStoryScheduler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,6 +34,7 @@ public class StoryController {
 
     private final StoryService storyService;
     private final TranslationService translationService;
+    private final FeaturedStoryScheduler featuredStoryScheduler;
 
     // ========== Homepage Endpoints ==========
 
@@ -118,6 +120,20 @@ public class StoryController {
     ) {
         StoryDto story = storyService.setFeatured(id, featured);
         return ResponseEntity.ok(story);
+    }
+
+    /**
+     * Manually trigger featured stories update (Admin only)
+     * This runs the same logic as the scheduled job
+     */
+    @PostMapping("/featured/refresh")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Refresh featured stories",
+            description = "Manually trigger the featured stories update process. " +
+                    "This will reset all current featured stories and promote new ones based on performance metrics.")
+    public ResponseEntity<String> refreshFeaturedStories() {
+        featuredStoryScheduler.manualUpdateFeaturedStories();
+        return ResponseEntity.ok("Featured stories updated successfully");
     }
 
     // ========== Existing Endpoints ==========
