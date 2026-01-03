@@ -320,22 +320,44 @@ public class SyosetuCrawlService {
 
     /**
      * Save or update story in database
+     * Note: This method is called within a transactional context from crawlNovel()
      */
-    @Transactional
     private Story saveOrUpdateStory(String sourceUrl, String title, String description, String authorName) {
         // Check if story already exists by source URL
         var existingStories = storyRepository.findBySourceUrl(sourceUrl);
 
         if (!existingStories.isEmpty()) {
             Story story = existingStories.get(0);
-            // Update existing story - save to raw columns since this is crawled data
-            story.setTitle(title);
+
+            // Always update raw columns since this is fresh crawled data
             story.setRawTitle(title);
-            story.setDescription(description);
             story.setRawDescription(description);
-            story.setAuthorName(authorName);
             story.setRawAuthorName(authorName);
-            log.info("Updating existing story ID: {}", story.getId());
+
+            // Only update main fields if NOT yet translated
+            // This preserves translated content when re-crawling
+            if (story.getTranslatedTitle() == null || story.getTranslatedTitle().trim().isEmpty()) {
+                story.setTitle(title);
+                log.debug("Updated title (not yet translated)");
+            } else {
+                log.debug("Preserved translated title, only updated rawTitle");
+            }
+
+            if (story.getTranslatedDescription() == null || story.getTranslatedDescription().trim().isEmpty()) {
+                story.setDescription(description);
+                log.debug("Updated description (not yet translated)");
+            } else {
+                log.debug("Preserved translated description, only updated rawDescription");
+            }
+
+            if (story.getTranslatedAuthorName() == null || story.getTranslatedAuthorName().trim().isEmpty()) {
+                story.setAuthorName(authorName);
+                log.debug("Updated author name (not yet translated)");
+            } else {
+                log.debug("Preserved translated author name, only updated rawAuthorName");
+            }
+
+            log.info("Updating existing story ID: {} (preserving translations)", story.getId());
             return storyRepository.save(story);
         } else {
             // Create new story - save to raw columns since this is crawled data

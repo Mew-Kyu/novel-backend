@@ -2,6 +2,7 @@ package com.graduate.novel.ai.service;
 
 import com.graduate.novel.ai.config.GeminiConfig;
 import com.graduate.novel.ai.dto.*;
+import com.graduate.novel.common.exception.RateLimitExceededException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -9,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -69,8 +72,14 @@ public class GeminiService {
             } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
                 retries++;
                 if (retries > maxRetries) {
+                    long retryAfterSeconds = extractRetryAfterSeconds(e.getResponseBodyAsString());
                     log.error("Max retries exceeded for rate limit. Please wait and try again later.");
-                    throw new RuntimeException("Rate limit exceeded. Please try again later.", e);
+
+                    String errorMessage = "Đã vượt quá giới hạn số lần gọi API Gemini. " +
+                            "Vui lòng thử lại sau " + (retryAfterSeconds > 0 ? retryAfterSeconds + " giây" : "ít phút") + ". " +
+                            "Bạn có thể kiểm tra quota tại: https://ai.dev/usage?tab=rate-limit";
+
+                    throw new RateLimitExceededException(errorMessage, retryAfterSeconds, e);
                 }
 
                 log.warn("Rate limit hit (429). Retrying in {} ms... (attempt {}/{})",
@@ -144,8 +153,14 @@ public class GeminiService {
             } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
                 retries++;
                 if (retries > maxRetries) {
+                    long retryAfterSeconds = extractRetryAfterSeconds(e.getResponseBodyAsString());
                     log.error("Max retries exceeded for rate limit. Please wait and try again later.");
-                    throw new RuntimeException("Rate limit exceeded. Please try again later.", e);
+
+                    String errorMessage = "Đã vượt quá giới hạn số lần gọi API Gemini. " +
+                            "Vui lòng thử lại sau " + (retryAfterSeconds > 0 ? retryAfterSeconds + " giây" : "ít phút") + ". " +
+                            "Bạn có thể kiểm tra quota tại: https://ai.dev/usage?tab=rate-limit";
+
+                    throw new RateLimitExceededException(errorMessage, retryAfterSeconds, e);
                 }
 
                 log.warn("Rate limit hit (429). Retrying in {} ms... (attempt {}/{})",
@@ -198,6 +213,27 @@ public class GeminiService {
                 ))
                 .generationConfig(config)
                 .build();
+    }
+
+    /**
+     * Extract retry-after seconds from Gemini API error response
+     * Example: "Please retry in 52.013683842s."
+     */
+    private long extractRetryAfterSeconds(String errorBody) {
+        try {
+            // Pattern to match "retry in XX.XXs" or "retry in XXs"
+            Pattern pattern = Pattern.compile("retry in ([0-9.]+)s", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(errorBody);
+
+            if (matcher.find()) {
+                String secondsStr = matcher.group(1);
+                double seconds = Double.parseDouble(secondsStr);
+                return (long) Math.ceil(seconds); // Round up to nearest second
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract retry-after seconds from error response: {}", e.getMessage());
+        }
+        return 0;
     }
 }
 

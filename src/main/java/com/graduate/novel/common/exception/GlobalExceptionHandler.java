@@ -51,6 +51,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleRateLimitExceeded(RateLimitExceededException ex) {
+        log.warn("Rate limit exceeded: {}", ex.getMessage());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", HttpStatus.TOO_MANY_REQUESTS.value());
+        response.put("message", ex.getMessage());
+
+        if (ex.getRetryAfterSeconds() > 0) {
+            response.put("retryAfterSeconds", ex.getRetryAfterSeconds());
+            response.put("retryAfter", String.format("Please retry after %d seconds", ex.getRetryAfterSeconds()));
+        }
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();

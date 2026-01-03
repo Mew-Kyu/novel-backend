@@ -40,38 +40,14 @@ public class TranslationService {
                 .topK(40)
                 .build();
 
-        int maxRetries = 3;
-        long retryDelay = 2000;
-
-        for (int attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-                String translation = geminiService.generateContent(prompt, config);
-                log.info("Translation completed successfully");
-                return translation != null ? translation.trim() : "";
-
-            } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
-                if (attempt < maxRetries) {
-                    log.warn("Rate limit hit during translation. Retrying in {} ms... (attempt {}/{})",
-                            retryDelay, attempt + 1, maxRetries);
-                    try {
-                        Thread.sleep(retryDelay);
-                        retryDelay *= 2; // Exponential backoff
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException("Interrupted during retry", ie);
-                    }
-                } else {
-                    log.error("Translation failed after {} attempts due to rate limiting", maxRetries + 1);
-                    throw new RuntimeException("Rate limit exceeded. Please try again later.", e);
-                }
-
-            } catch (Exception e) {
-                log.error("Translation failed: {}", e.getMessage(), e);
-                throw new RuntimeException("Failed to translate text", e);
-            }
+        try {
+            String translation = geminiService.generateContent(prompt, config);
+            log.info("Translation completed successfully");
+            return translation != null ? translation.trim() : "";
+        } catch (Exception e) {
+            log.error("Translation failed: {}", e.getMessage(), e);
+            throw e; // Re-throw to let GlobalExceptionHandler handle it
         }
-
-        throw new RuntimeException("Failed to translate after " + maxRetries + " retries");
     }
 
     /**
