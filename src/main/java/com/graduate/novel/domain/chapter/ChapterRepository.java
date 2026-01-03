@@ -26,6 +26,10 @@ public interface ChapterRepository extends JpaRepository<Chapter, Long> {
     @Query("SELECT COUNT(c) FROM Chapter c WHERE c.story.id = :storyId")
     Integer countByStoryId(@Param("storyId") Long storyId);
 
+    // Get maximum chapter index for a story
+    @Query("SELECT MAX(c.chapterIndex) FROM Chapter c WHERE c.story.id = :storyId")
+    Integer findMaxChapterIndexByStoryId(@Param("storyId") Long storyId);
+
     // Get latest chapter of a story
     @Query("SELECT c FROM Chapter c WHERE c.story.id = :storyId ORDER BY c.updatedAt DESC, c.chapterIndex DESC")
     List<Chapter> findLatestByStoryId(@Param("storyId") Long storyId, Pageable pageable);

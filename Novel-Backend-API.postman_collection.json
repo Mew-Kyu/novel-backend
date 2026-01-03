@@ -1838,7 +1838,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "crawl", "syosetu"]
 						},
-						"description": "Crawl a novel from Syosetu (ncode.syosetu.com). Requires ADMIN or MODERATOR role.\n\n**Request Body:**\n- `novelUrl` (required): Full URL of the novel on Syosetu\n- `startChapter` (optional): Starting chapter number (default: 1)\n- `endChapter` (optional): Ending chapter number (default: 1)\n\n**✨ NEW Features (Updated Dec 2025):**\n- ✅ Extracts author name (e.g., \"錬金王\") and stores in `rawAuthorName`\n- ✅ Extracts actual chapter titles (e.g., \"プロローグ\", \"第一話\") instead of generic \"Chapter 1\"\n- ✅ Automatically creates CrawlJob for tracking (check via GET /api/jobs)\n- ✅ Stores raw Japanese text in `raw_*` fields for later translation\n- ✅ Updates existing stories if URL already crawled\n\n**What Gets Crawled:**\n- Story title → `rawTitle`\n- Story description → `rawDescription`  \n- Author name → `rawAuthorName` (NEW!)\n- Chapter titles → `rawTitle` per chapter (NEW!)\n- Chapter content → `rawContent` per chapter\n\n**Example URLs:**\n- https://ncode.syosetu.com/n5375cy/ (Author: 錬金王)\n- https://ncode.syosetu.com/n9669bk/ (Chapters: プロローグ, 第一話, etc.)\n\n**Response:**\n- `storyId`: ID of the created/updated story\n- `title`: Story title\n- `description`: Story description\n- `chaptersCrawled`: Total chapters attempted\n- `chaptersSucceeded`: Successfully crawled chapters\n- `chaptersFailed`: Failed chapters\n- `message`: Summary message\n\n**After Crawling:**\n1. Check crawl job: `GET /api/jobs` or `GET /api/jobs/by-story/{storyId}`\n2. Translate story: `POST /api/stories/translate/story/{storyId}` (translates title, desc, romanizes author)\n3. Translate chapters: `POST /api/stories/{storyId}/chapters/{chapterId}/translate` (translates title + content)"
+						"description": "Crawl a novel from Syosetu (ncode.syosetu.com). Requires ADMIN or MODERATOR role.\n\n**Request Body:**\n- `novelUrl` (required): Full URL of the novel on Syosetu\n- `startChapter` (optional): Starting chapter number. If omitted along with endChapter, auto-detects next chapter to crawl\n- `endChapter` (optional): Ending chapter number. If omitted along with startChapter, auto-detects next chapter to crawl\n\n**✨ NEW Features (Updated Jan 2026):**\n- ✅ **Auto-crawl next chapter**: Omit startChapter and endChapter to automatically crawl the next chapter after the last one in DB\n- ✅ **Smart detection**: Returns error if no more chapters available on Syosetu\n- ✅ Extracts author name (e.g., \"錬金王\") and stores in `rawAuthorName`\n- ✅ Extracts actual chapter titles (e.g., \"プロローグ\", \"第一話\") instead of generic \"Chapter 1\"\n- ✅ Automatically creates CrawlJob for tracking (check via GET /api/jobs)\n- ✅ Stores raw Japanese text in `raw_*` fields for later translation\n- ✅ Updates existing stories if URL already crawled\n\n**What Gets Crawled:**\n- Story title → `rawTitle`\n- Story description → `rawDescription`  \n- Author name → `rawAuthorName`\n- Chapter titles → `rawTitle` per chapter\n- Chapter content → `rawContent` per chapter\n\n**Example URLs:**\n- https://ncode.syosetu.com/n5375cy/ (Author: 錬金王)\n- https://ncode.syosetu.com/n9669bk/ (Chapters: プロローグ, 第一話, etc.)\n\n**Response:**\n- `storyId`: ID of the created/updated story\n- `title`: Story title\n- `description`: Story description\n- `chaptersCrawled`: Total chapters attempted\n- `chaptersSucceeded`: Successfully crawled chapters\n- `chaptersFailed`: Failed chapters\n- `message`: Summary message\n\n**After Crawling:**\n1. Check crawl job: `GET /api/jobs` or `GET /api/jobs/by-story/{storyId}`\n2. Translate story: `POST /api/stories/translate/story/{storyId}` (translates title, desc, romanizes author)\n3. Translate chapters: `POST /api/stories/{storyId}/chapters/{chapterId}/translate` (translates title + content)"
 					},
 					"response": []
 				},
@@ -1908,6 +1908,29 @@
 							"path": ["api", "crawl", "syosetu"]
 						},
 						"description": "Re-crawl an existing story to add more chapters or update existing content. If the story URL already exists in the database, it will be updated instead of creating a new story."
+					},
+					"response": []
+				},
+				{
+					"name": "Auto-Crawl Next Chapter",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"novelUrl\": \"https://ncode.syosetu.com/n5375cy/\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/crawl/syosetu",
+							"host": ["{{base_url}}"],
+							"path": ["api", "crawl", "syosetu"]
+						},
+						"description": "**✨ NEW: Auto-crawl next chapter**\n\nCrawl the next chapter automatically without specifying chapter numbers.\n\n**How it works:**\n- If the story already exists in DB: Crawls the chapter after the last one (e.g., if last chapter is 5, crawls chapter 6)\n- If story is new: Crawls chapter 1\n- If no next chapter exists on Syosetu: Returns error message \"No next chapter available. Story already has all available chapters (last chapter: X)\"\n\n**Request Body:**\n- `novelUrl` (required): Full URL of the novel on Syosetu\n- `startChapter` (optional): Omit to auto-detect next chapter\n- `endChapter` (optional): Omit to auto-detect next chapter\n\n**Example Response (success):**\n```json\n{\n  \"storyId\": 1,\n  \"title\": \"錬金術師です。自重はゴミ箱に捨ててきました。\",\n  \"chaptersCrawled\": 1,\n  \"chaptersSucceeded\": 1,\n  \"chaptersFailed\": 0,\n  \"message\": \"Crawl completed: 1 succeeded, 0 failed out of 1 chapters\"\n}\n```\n\n**Example Response (no more chapters):**\n```json\n{\n  \"error\": \"No next chapter available. Story already has all available chapters (last chapter: 350)\"\n}\n```"
 					},
 					"response": []
 				},

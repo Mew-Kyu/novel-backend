@@ -67,8 +67,27 @@ public class SyosetuCrawlService {
             story = saveOrUpdateStory(baseUrl, title, description, authorName);
 
             // Step 3: Determine chapter range
-            int startChapter = request.getStartChapter() != null ? request.getStartChapter() : 1;
-            int endChapter = request.getEndChapter() != null ? request.getEndChapter() : 1;
+            int startChapter;
+            int endChapter;
+
+            // If no parameters provided, crawl next chapter after the last one in DB
+            if (request.getStartChapter() == null && request.getEndChapter() == null) {
+                Integer maxChapterIndex = chapterRepository.findMaxChapterIndexByStoryId(story.getId());
+                if (maxChapterIndex == null) {
+                    // No chapters yet, start from chapter 1
+                    startChapter = 1;
+                    endChapter = 1;
+                } else {
+                    // Crawl next chapter
+                    startChapter = maxChapterIndex + 1;
+                    endChapter = maxChapterIndex + 1;
+                }
+                log.info("No chapter range specified. Auto-detected next chapter to crawl: {}", startChapter);
+            } else {
+                // Use provided values or defaults
+                startChapter = request.getStartChapter() != null ? request.getStartChapter() : 1;
+                endChapter = request.getEndChapter() != null ? request.getEndChapter() : startChapter;
+            }
 
             if (endChapter < startChapter) {
                 throw new BadRequestException("End chapter must be greater than or equal to start chapter");
@@ -89,6 +108,7 @@ public class SyosetuCrawlService {
             // Step 4: Crawl chapters
             int succeeded = 0;
             int failed = 0;
+            int notFound = 0;
 
             for (int chapterNum = startChapter; chapterNum <= endChapter; chapterNum++) {
                 try {
@@ -97,8 +117,20 @@ public class SyosetuCrawlService {
                         addPoliteDelay();
                     }
 
-                    boolean success = crawlAndSaveChapter(story, baseUrl, chapterNum);
-                    if (success) {
+                    Boolean result = crawlAndSaveChapter(story, baseUrl, chapterNum);
+                    if (result == null) {
+                        // Chapter doesn't exist
+                        notFound++;
+                        log.warn("Chapter {} does not exist", chapterNum);
+
+                        // If this is an auto-detected next chapter and it doesn't exist, throw specific error
+                        if (request.getStartChapter() == null && request.getEndChapter() == null) {
+                            throw new BadRequestException(
+                                String.format("No next chapter available. Story already has all available chapters (last chapter: %d)",
+                                    chapterNum - 1)
+                            );
+                        }
+                    } else if (result) {
                         succeeded++;
                         log.info("Successfully crawled chapter {}/{}", chapterNum, endChapter);
                     } else {
@@ -176,6 +208,26 @@ public class SyosetuCrawlService {
                 .followRedirects(true)
                 .ignoreHttpErrors(false)
                 .get();
+    }
+
+    /**
+     * Fetch a document from URL and return null if 404 (for checking chapter existence)
+     */
+    private Document fetchDocumentOrNull(String url) {
+        log.debug("Fetching URL with error handling: {}", url);
+
+        try {
+            return Jsoup.connect(url)
+                    .userAgent(USER_AGENT)
+                    .timeout(TIMEOUT_MS)
+                    .followRedirects(true)
+                    .ignoreHttpErrors(true)
+                    .execute()
+                    .parse();
+        } catch (Exception e) {
+            log.warn("Failed to fetch URL {}: {}", url, e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -292,15 +344,29 @@ public class SyosetuCrawlService {
 
     /**
      * Crawl a specific chapter and save to database
+     * Returns: true if success, false if failed, null if chapter doesn't exist (404)
      */
-    private boolean crawlAndSaveChapter(Story story, String baseUrl, int chapterNum) {
+    private Boolean crawlAndSaveChapter(Story story, String baseUrl, int chapterNum) {
         String chapterUrl = baseUrl + chapterNum + "/";
 
         log.info("Crawling chapter {} from URL: {}", chapterNum, chapterUrl);
 
         try {
-            // Fetch chapter page
-            Document chapterDoc = fetchDocument(chapterUrl);
+            // Fetch chapter page with error handling
+            Document chapterDoc = fetchDocumentOrNull(chapterUrl);
+
+            if (chapterDoc == null) {
+                log.warn("Chapter {} does not exist or could not be fetched", chapterNum);
+                return null; // Chapter doesn't exist
+            }
+
+            // Check if page is 404 error page
+            String pageTitle = chapterDoc.title();
+            if (pageTitle != null && (pageTitle.contains("404") || pageTitle.contains("Not Found"))) {
+                log.warn("Chapter {} returned 404 error page", chapterNum);
+                return null; // Chapter doesn't exist
+            }
+
             log.debug("Fetched chapter page. Title: {}", chapterDoc.title());
             log.info("📄 Page URL: {}", chapterUrl);
             log.info("📄 Page title tag: {}", chapterDoc.title());
