@@ -66,6 +66,15 @@ public class SyosetuCrawlService {
             // Step 2: Save or update story
             story = saveOrUpdateStory(baseUrl, title, description, authorName);
 
+            // Step 2.5: Check if there's already an active crawl job for this story
+            boolean hasActiveCrawlJob = crawlJobService.hasActiveJobForStory(story.getId(), "STORY_CRAWL");
+            if (hasActiveCrawlJob) {
+                throw new BadRequestException(
+                    String.format("Story ID %d is already being crawled. Please wait for the current job to complete.",
+                        story.getId())
+                );
+            }
+
             // Step 3: Determine chapter range
             int startChapter;
             int endChapter;
@@ -102,6 +111,10 @@ public class SyosetuCrawlService {
             var jobDto = crawlJobService.createJob(jobRequest);
             jobId = jobDto.id();
             log.info("Created crawl job with jobId={} for storyId={}", jobId, story.getId());
+
+            // Set job status to PROCESSING to prevent concurrent crawls
+            crawlJobService.updateJobStatus(jobId, "PROCESSING", null);
+            log.info("Set crawl job {} to PROCESSING status", jobId);
 
             log.info("Crawling chapters {} to {} for storyId={}", startChapter, endChapter, story.getId());
 
@@ -399,6 +412,15 @@ public class SyosetuCrawlService {
                 chapter.setRawContent(content);
                 chapter.setCrawlStatus("SUCCESS");
                 chapter.setCrawlTime(LocalDateTime.now());
+
+                // Reset translation status since content has been updated
+                // Old translation no longer matches new content
+                chapter.setTranslateStatus("NONE");
+                chapter.setTranslatedTitle(null);
+                chapter.setTranslatedContent(null);
+                chapter.setTranslateTime(null);
+
+                log.info("Re-crawled existing chapter {} - translation status reset to NONE", chapterNum);
                 log.debug("Updating existing chapter {} for story ID: {}", chapterNum, story.getId());
             } else {
                 // Create new chapter

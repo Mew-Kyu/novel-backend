@@ -1,6 +1,8 @@
 package com.graduate.novel.ai.service;
 
 import com.graduate.novel.ai.dto.GeminiRequest;
+import com.graduate.novel.common.exception.BadRequestException;
+import com.graduate.novel.domain.crawljob.CrawlJobService;
 import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ public class TranslationService {
 
     private final GeminiService geminiService;
     private final StoryRepository storyRepository;
+    private final CrawlJobService crawlJobService;
 
     /**
      * Translate Japanese text to Vietnamese
@@ -194,6 +197,15 @@ public class TranslationService {
     public Story translateStory(Long storyId, boolean translateTitle, boolean translateDescription) {
         Story story = storyRepository.findById(storyId)
                 .orElseThrow(() -> new RuntimeException("Story not found with id: " + storyId));
+
+        // Check if there's already an active translation job for this story
+        boolean hasActiveTranslationJob = crawlJobService.hasActiveJobForStory(storyId, "STORY_TRANSLATE");
+        if (hasActiveTranslationJob) {
+            throw new BadRequestException(
+                String.format("Story %d is already being translated. Please wait for the current job to complete.",
+                    storyId)
+            );
+        }
 
         log.info("Translating story ID: {} (title: {}, description: {})",
                 storyId, translateTitle, translateDescription);

@@ -4,6 +4,7 @@ import com.graduate.novel.ai.service.TranslationService;
 import com.graduate.novel.common.exception.BadRequestException;
 import com.graduate.novel.common.exception.ResourceNotFoundException;
 import com.graduate.novel.common.mapper.ChapterMapper;
+import com.graduate.novel.domain.crawljob.CrawlJobService;
 import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class ChapterService {
     private final StoryRepository storyRepository;
     private final ChapterMapper chapterMapper;
     private final TranslationService translationService;
+    private final CrawlJobService crawlJobService;
 
     @Transactional(readOnly = true)
     public List<ChapterDto> getChaptersByStoryId(Long storyId) {
@@ -159,6 +161,22 @@ public class ChapterService {
             throw new BadRequestException("Cannot translate: Chapter has no raw content");
         }
 
+        // Check if there's already an active translation job for this chapter
+        boolean hasActiveTranslationJob = crawlJobService.hasActiveJobForChapter(chapterId, "CHAPTER_TRANSLATE");
+        if (hasActiveTranslationJob) {
+            throw new BadRequestException(
+                String.format("Chapter %d is already being translated. Please wait for the current job to complete.",
+                    chapterId)
+            );
+        }
+
+        // Check if already being translated (status PENDING)
+        if ("PENDING".equals(chapter.getTranslateStatus())) {
+            throw new BadRequestException(
+                String.format("Chapter %d is already in translation queue (status: PENDING)", chapterId)
+            );
+        }
+
         log.info("Starting translation for chapterId={} (index={}) of storyId={}",
                 chapterId, chapter.getChapterIndex(), storyId);
 
@@ -212,6 +230,15 @@ public class ChapterService {
             throw new ResourceNotFoundException("Story not found with id: " + storyId);
         }
 
+        // Check if there's already an active translation job for this story
+        boolean hasActiveTranslationJob = crawlJobService.hasActiveJobForStory(storyId, "STORY_TRANSLATE");
+        if (hasActiveTranslationJob) {
+            throw new BadRequestException(
+                String.format("Story %d is already being translated. Please wait for the current job to complete.",
+                    storyId)
+            );
+        }
+
         List<Chapter> chapters = chapterRepository.findByStoryIdAndTranslateStatusAndRawContentIsNotNull(
                 storyId, "NONE");
 
@@ -262,6 +289,15 @@ public class ChapterService {
      */
     @Transactional
     public void retryFailedTranslations(Long storyId) {
+        // Check if there's already an active translation job for this story
+        boolean hasActiveTranslationJob = crawlJobService.hasActiveJobForStory(storyId, "STORY_TRANSLATE");
+        if (hasActiveTranslationJob) {
+            throw new BadRequestException(
+                String.format("Story %d is already being translated. Please wait for the current job to complete.",
+                    storyId)
+            );
+        }
+
         List<Chapter> failedChapters = chapterRepository.findByStoryIdAndTranslateStatus(storyId, "FAILED");
 
         log.info("Retrying {} failed translations for storyId={}", failedChapters.size(), storyId);

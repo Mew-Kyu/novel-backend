@@ -105,5 +105,21 @@ public class CrawlJobService {
                 .map(crawlJobMapper::toDto)
                 .toList();
     }
+
+    /**
+     * Check if there's an active job (PENDING or PROCESSING) for a story
+     */
+    @Transactional(readOnly = true)
+    public boolean hasActiveJobForStory(Long storyId, String jobType) {
+        return crawlJobRepository.existsActiveJobByStoryIdAndJobType(storyId, jobType);
+    }
+
+    /**
+     * Check if there's an active job (PENDING or PROCESSING) for a chapter
+     */
+    @Transactional(readOnly = true)
+    public boolean hasActiveJobForChapter(Long chapterId, String jobType) {
+        return crawlJobRepository.existsActiveJobByChapterIdAndJobType(chapterId, jobType);
+    }
 }
 
