@@ -62,6 +62,9 @@ public record StoryDto(
     @Schema(description = "Story publication status", example = "PUBLISHED")
     StoryStatus status,
 
+    @Schema(description = "Whether this story is featured on homepage", example = "true")
+    Boolean featured,
+
     @Schema(description = "List of genres associated with this story")
     List<GenreDto> genres
 ) {}
