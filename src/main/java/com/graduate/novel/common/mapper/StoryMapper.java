@@ -49,5 +49,6 @@ public interface StoryMapper {
     @Mapping(target = "translatedAuthorName", ignore = true)
     @Mapping(target = "genres", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateEntity(UpdateStoryRequest request, @MappingTarget Story story);
 }

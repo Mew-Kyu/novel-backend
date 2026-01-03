@@ -1,5 +1,6 @@
 package com.graduate.novel.ai.service;
 
+import com.graduate.novel.common.exception.RateLimitExceededException;
 import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class SemanticSearchService {
 
     /**
      * Generate and save embedding for a story
+     * Note: RateLimitExceededException will be caught by GlobalExceptionHandler
      */
     @Transactional
     public void generateStoryEmbedding(Long storyId) {
@@ -30,25 +32,35 @@ public class SemanticSearchService {
         // Create a combined text for embedding (title + description)
         String textForEmbedding = buildEmbeddingText(story);
 
-        // Generate embedding using Gemini
-        float[] embedding = geminiService.generateEmbedding(textForEmbedding);
+        try {
+            // Generate embedding using Gemini (may throw RateLimitExceededException)
+            float[] embedding = geminiService.generateEmbedding(textForEmbedding);
 
-        if (embedding != null) {
-            // Convert float[] to PostgreSQL vector format string
-            String vectorString = convertFloatArrayToVectorString(embedding);
+            if (embedding != null) {
+                // Convert float[] to PostgreSQL vector format string
+                String vectorString = convertFloatArrayToVectorString(embedding);
 
-            // Use custom query with explicit CAST to avoid type error
-            storyRepository.updateEmbedding(story.getId(), vectorString);
+                // Use custom query with explicit CAST to avoid type error
+                storyRepository.updateEmbedding(story.getId(), vectorString);
 
-            log.info("Embedding saved successfully for story: {}", story.getTitle());
-        } else {
-            log.error("Failed to generate embedding for story: {}", story.getTitle());
-            throw new RuntimeException("Failed to generate embedding");
+                log.info("Embedding saved successfully for story: {}", story.getTitle());
+            } else {
+                log.error("Failed to generate embedding for story: {}", story.getTitle());
+                throw new RuntimeException("Failed to generate embedding");
+            }
+        } catch (RateLimitExceededException e) {
+            // Re-throw to let GlobalExceptionHandler handle it
+            log.warn("Rate limit exceeded while generating embedding for story: {}", story.getTitle());
+            throw e;
+        } catch (Exception e) {
+            log.error("Error generating embedding for story {}: {}", story.getTitle(), e.getMessage(), e);
+            throw new RuntimeException("Failed to generate embedding: " + e.getMessage(), e);
         }
     }
 
     /**
      * Generate embeddings for all stories without embeddings
+     * This is a batch operation - handles rate limits internally with retry logic
      */
     @Transactional
     public void generateAllMissingEmbeddings() {
@@ -57,11 +69,12 @@ public class SemanticSearchService {
 
         int successCount = 0;
         int failCount = 0;
+        int rateLimitCount = 0;
 
         for (Story story : storiesWithoutEmbedding) {
             try {
                 log.info("Processing story {}/{}: {}",
-                        successCount + failCount + 1,
+                        successCount + failCount + rateLimitCount + 1,
                         storiesWithoutEmbedding.size(),
                         story.getTitle());
 
@@ -84,25 +97,31 @@ public class SemanticSearchService {
 
                     successCount++;
                     log.info("✓ Generated embedding for story: {} ({}/{})",
-                            story.getTitle(), successCount + failCount, storiesWithoutEmbedding.size());
+                            story.getTitle(), successCount + failCount + rateLimitCount, storiesWithoutEmbedding.size());
                 } else {
                     failCount++;
                     log.error("✗ Failed to generate embedding for story: {}", story.getTitle());
                 }
 
-                // Add a longer delay to avoid rate limiting (2 seconds)
-                if (successCount + failCount < storiesWithoutEmbedding.size()) {
+                // Add delay to avoid rate limiting (2 seconds)
+                if (successCount + failCount + rateLimitCount < storiesWithoutEmbedding.size()) {
                     log.debug("Waiting 2 seconds before next request to avoid rate limits...");
                     Thread.sleep(2000);
                 }
 
-            } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
-                failCount++;
-                log.error("✗ Rate limit exceeded for story: {}. Waiting 60 seconds...", story.getTitle());
+            } catch (RateLimitExceededException e) {
+                rateLimitCount++;
+                long waitSeconds = e.getRetryAfterSeconds() > 0 ? e.getRetryAfterSeconds() : 60;
+                log.warn("✗ Rate limit exceeded for story: {}. Waiting {} seconds...",
+                        story.getTitle(), waitSeconds);
+                log.warn("Rate limit message: {}", e.getMessage());
+
                 try {
-                    Thread.sleep(60000); // Wait 1 minute if rate limited
+                    Thread.sleep(waitSeconds * 1000);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
+                    log.error("Interrupted while waiting for rate limit cooldown");
+                    break; // Stop processing if interrupted
                 }
 
             } catch (Exception e) {
@@ -113,40 +132,57 @@ public class SemanticSearchService {
             }
         }
 
-        log.info("Embedding generation completed. Success: {}, Failed: {}", successCount, failCount);
+        log.info("Embedding generation completed. Success: {}, Failed: {}, Rate Limited: {}",
+                successCount, failCount, rateLimitCount);
+
+        if (rateLimitCount > 0) {
+            log.warn("⚠️ {} stories were skipped due to rate limiting. Please run this job again later.",
+                    rateLimitCount);
+        }
     }
 
     /**
      * Search stories by semantic similarity
+     * Note: RateLimitExceededException will be caught by GlobalExceptionHandler
      */
     @Transactional(readOnly = true)
     public List<Story> searchBySimilarity(String query, int limit) {
         log.info("Performing semantic search for query: '{}'", query);
 
-        // Generate embedding for the search query
-        float[] queryEmbedding = geminiService.generateEmbedding(query);
+        try {
+            // Generate embedding for the search query (may throw RateLimitExceededException)
+            float[] queryEmbedding = geminiService.generateEmbedding(query);
 
-        if (queryEmbedding == null) {
-            log.error("Failed to generate embedding for query");
-            throw new RuntimeException("Failed to generate query embedding");
+            if (queryEmbedding == null) {
+                log.error("Failed to generate embedding for query");
+                throw new RuntimeException("Failed to generate query embedding");
+            }
+
+            // Convert to PostgreSQL vector format string
+            String queryEmbeddingString = convertFloatArrayToVectorString(queryEmbedding);
+
+            // Step 1: Find story IDs using vector similarity (native query required for vector operations)
+            List<Long> storyIds = storyRepository.findStoryIdsBySimilarity(queryEmbeddingString, limit);
+
+            if (storyIds.isEmpty()) {
+                log.info("No similar stories found");
+                return List.of();
+            }
+
+            // Step 2: Fetch full Story entities with genres eagerly loaded to avoid lazy initialization error
+            List<Story> results = storyRepository.findByIdInWithGenres(storyIds);
+
+            log.info("Found {} similar stories", results.size());
+            return results;
+
+        } catch (RateLimitExceededException e) {
+            // Re-throw to let GlobalExceptionHandler handle it
+            log.warn("Rate limit exceeded during semantic search for query: '{}'", query);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error during semantic search for query '{}': {}", query, e.getMessage(), e);
+            throw new RuntimeException("Failed to perform semantic search: " + e.getMessage(), e);
         }
-
-        // Convert to PostgreSQL vector format string
-        String queryEmbeddingString = convertFloatArrayToVectorString(queryEmbedding);
-
-        // Step 1: Find story IDs using vector similarity (native query required for vector operations)
-        List<Long> storyIds = storyRepository.findStoryIdsBySimilarity(queryEmbeddingString, limit);
-
-        if (storyIds.isEmpty()) {
-            log.info("No similar stories found");
-            return List.of();
-        }
-
-        // Step 2: Fetch full Story entities with genres eagerly loaded to avoid lazy initialization error
-        List<Story> results = storyRepository.findByIdInWithGenres(storyIds);
-
-        log.info("Found {} similar stories", results.size());
-        return results;
     }
 
     /**

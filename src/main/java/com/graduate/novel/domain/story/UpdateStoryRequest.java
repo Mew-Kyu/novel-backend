@@ -1,5 +1,7 @@
 package com.graduate.novel.domain.story;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.graduate.novel.common.jackson.LongSetDeserializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
@@ -28,5 +30,6 @@ public record UpdateStoryRequest(
 
     @Schema(description = "Array of genre IDs to replace all existing genres. Send empty array to remove all genres.",
             example = "[1, 4, 5]")
+    @JsonDeserialize(using = LongSetDeserializer.class)
     Set<Long> genreIds
 ) {}

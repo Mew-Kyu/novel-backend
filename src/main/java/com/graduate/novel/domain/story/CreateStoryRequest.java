@@ -1,5 +1,7 @@
 package com.graduate.novel.domain.story;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.graduate.novel.common.jackson.LongSetDeserializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -29,5 +31,6 @@ public record CreateStoryRequest(
     String sourceSite,
 
     @Schema(description = "Array of genre IDs to assign to the story", example = "[1, 2, 3]")
+    @JsonDeserialize(using = LongSetDeserializer.class)
     Set<Long> genreIds
 ) {}
