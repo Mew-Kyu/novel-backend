@@ -8,6 +8,8 @@ import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryRepository;
 import com.graduate.novel.domain.user.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReadingHistoryService {
 
     private final ReadingHistoryRepository historyRepository;
@@ -40,22 +43,46 @@ public class ReadingHistoryService {
                     .orElseThrow(() -> new ResourceNotFoundException("Chapter not found with id: " + request.chapterId()));
         }
 
-        ReadingHistory history = historyRepository
-                .findByUserIdAndStoryId(currentUser.getId(), request.storyId())
-                .orElse(ReadingHistory.builder()
-                        .user(currentUser)
-                        .story(story)
-                        .build());
+        try {
+            // Use pessimistic locking to prevent concurrent inserts
+            ReadingHistory history = historyRepository
+                    .findByUserIdAndStoryIdWithLock(currentUser.getId(), request.storyId())
+                    .orElse(ReadingHistory.builder()
+                            .user(currentUser)
+                            .story(story)
+                            .build());
 
-        history.setChapter(chapter);
-        if (request.progressPercent() != null) {
-            history.setProgressPercent(request.progressPercent());
-        }
-        if (request.scrollOffset() != null) {
-            history.setScrollOffset(request.scrollOffset());
-        }
+            history.setChapter(chapter);
+            if (request.progressPercent() != null) {
+                history.setProgressPercent(request.progressPercent());
+            }
+            if (request.scrollOffset() != null) {
+                history.setScrollOffset(request.scrollOffset());
+            }
 
-        history = historyRepository.save(history);
-        return historyMapper.toDto(history);
+            history = historyRepository.save(history);
+            return historyMapper.toDto(history);
+
+        } catch (DataIntegrityViolationException e) {
+            // Handle race condition - if duplicate still happens, fetch and update
+            log.warn("Constraint violation when saving reading history for user {} and story {}, retrying...",
+                    currentUser.getId(), request.storyId());
+
+            // Retry by fetching the existing record
+            ReadingHistory existingHistory = historyRepository
+                    .findByUserIdAndStoryIdWithLock(currentUser.getId(), request.storyId())
+                    .orElseThrow(() -> new RuntimeException("Failed to retrieve reading history after constraint violation"));
+
+            existingHistory.setChapter(chapter);
+            if (request.progressPercent() != null) {
+                existingHistory.setProgressPercent(request.progressPercent());
+            }
+            if (request.scrollOffset() != null) {
+                existingHistory.setScrollOffset(request.scrollOffset());
+            }
+
+            existingHistory = historyRepository.save(existingHistory);
+            return historyMapper.toDto(existingHistory);
+        }
     }
 }

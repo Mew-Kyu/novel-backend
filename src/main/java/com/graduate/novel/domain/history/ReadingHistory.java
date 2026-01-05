@@ -8,7 +8,10 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_history_read")
+@Table(name = "user_history_read",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_user_story_history", columnNames = {"user_id", "story_id"})
+        })
 @Getter
 @Setter
 @NoArgsConstructor
