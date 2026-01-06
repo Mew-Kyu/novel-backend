@@ -95,6 +95,9 @@ public class SecurityConfig {
                         // Admin/Moderator rating and comment management - requires ADMIN or MODERATOR role
                         .requestMatchers("/api/ratings/admin/**").hasAnyRole("ADMIN", "MODERATOR")
                         .requestMatchers("/api/comments/admin/**").hasAnyRole("ADMIN", "MODERATOR")
+                        // Recommendation endpoints - PUBLIC endpoint MUST come FIRST
+                        .requestMatchers(HttpMethod.GET, "/api/recommendations/similar/*/public").permitAll() // Public similar stories - no auth required
+                        .requestMatchers("/api/recommendations/**").authenticated() // All other recommendation endpoints - require auth
                         // Export endpoints - requires authentication but allows all roles
                         .requestMatchers(HttpMethod.GET, "/api/export/*/epub").authenticated() // GET /api/export/{storyId}/epub
                         // Cloudinary upload endpoint - requires ADMIN or MODERATOR role

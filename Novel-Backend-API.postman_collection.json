@@ -2700,6 +2700,120 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Recommendations",
+			"description": "Personalized story recommendations using Collaborative Filtering and Content-based Filtering algorithms",
+			"item": [
+				{
+					"name": "Get Personalized Recommendations (For You)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/for-you?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "for-you"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of recommendations"
+								}
+							]
+						},
+						"description": "**Get personalized recommendations - \"Có thể bạn sẽ thích\"**\n\n**Algorithm: Hybrid Approach**\n- 40% Content-based Filtering (based on your favorite genres)\n- 30% Collaborative Filtering (based on users with similar tastes)\n- 20% Trending stories (popular recent stories)\n- 10% High-rated stories (fallback)\n\n**Features:**\n- Analyzes reading history, ratings, and favorites\n- Excludes stories you've already read\n- Adapts to your preferences over time\n\n**Requirements:**\n- Requires authentication (JWT token)\n\n**Use Cases:**\n- Homepage 'You May Like' section\n- Personalized discovery page\n- User dashboard recommendations\n\n**Response Example:**\n```json\n{\n  \"stories\": [\n    {\n      \"id\": 1,\n      \"title\": \"Story Title\",\n      \"authorName\": \"Author\",\n      \"genres\": [...],\n      ...\n    }\n  ],\n  \"type\": \"HYBRID\",\n  \"totalCount\": 10,\n  \"explanation\": \"Based on your reading history, preferences, and trending stories\"\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Content-Based Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/content-based?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "content-based"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of recommendations"
+								}
+							]
+						},
+						"description": "**Get content-based recommendations only**\n\n**Algorithm: Content-based Filtering**\n- Analyzes genres from your reading history\n- Weighted by ratings (high ratings = prefer genre)\n- Weighted by favorites (strongest signal)\n\n**Scoring System:**\n- Reading History: +1.0 per story\n- High Rating (4-5): +2.0 per story\n- Low Rating (1-2): -0.5 per story (avoid genre)\n- Neutral (3): +0.5 per story\n- Favorites: +3.0 per story (strongest signal)\n\n**Requirements:**\n- Requires authentication\n- User should have some reading history\n\n**Use Cases:**\n- Genre-based discovery\n- Testing content-based algorithm\n- When collaborative filtering data is insufficient"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Collaborative Filtering Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/collaborative?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "collaborative"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of recommendations"
+								}
+							]
+						},
+						"description": "**Get collaborative filtering recommendations**\n\n**Algorithm: Collaborative Filtering (User-based)**\n- Finds users who rated similar stories as you\n- Calculates similarity using Jaccard similarity\n- Recommends highly-rated stories from similar users\n- Weighted by similarity score and rating value\n\n**Similarity Calculation:**\n```\nJaccard Similarity = Common Stories / Total Stories User A\n\nExample:\nUser A rated: [1, 2, 3, 4, 5]\nUser B rated: [3, 4, 5, 6, 7]\nCommon: [3, 4, 5] = 3 stories\nSimilarity = 3 / 5 = 0.6 (60%)\n```\n\n**Requirements:**\n- Requires authentication\n- User must have rated at least 1 story\n- Other users must have rated same stories\n\n**Use Cases:**\n- Social-based discovery\n- \"Users like you also enjoyed\"\n- Testing collaborative filtering algorithm"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Similar Stories (Authenticated)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/similar/1?limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "similar", "1"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Number of similar stories"
+								}
+							]
+						},
+						"description": "**Get similar stories to a specific story (authenticated)**\n\n**Algorithm: Semantic Similarity + Genre-based**\n- **Primary:** Uses semantic embeddings (pgvector + Gemini AI) for content similarity\n- **Fallback:** Genre-based similarity if embeddings not available\n- Excludes stories you've already read\n\n**How it works:**\n1. If story has embeddings → Use cosine similarity search\n2. Otherwise → Find stories in same genres\n3. Filter out user's read stories\n4. Sort by similarity score\n\n**Requirements:**\n- Requires authentication\n- Story ID must exist\n\n**Use Cases:**\n- Story detail page recommendations\n- \"Similar Stories\" section\n- \"Readers also liked\" section\n- Related content suggestions"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Similar Stories (Public)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/similar/1/public?limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "similar", "1", "public"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "5",
+									"description": "Number of similar stories"
+								}
+							]
+						},
+						"description": "**Get similar stories (public access - no authentication)**\n\n**Algorithm: Same as authenticated version**\n- Semantic similarity using embeddings\n- Genre-based fallback\n- Does NOT exclude user's read stories (anonymous)\n\n**Differences from authenticated endpoint:**\n- ✅ No authentication required\n- ✅ Works for anonymous users\n- ✅ SEO-friendly (crawlable by search engines)\n- ❌ Cannot personalize based on user's read history\n\n**Requirements:**\n- No authentication required\n- Story ID must exist\n\n**Use Cases:**\n- Similar stories for anonymous users\n- Public story browsing\n- SEO-friendly recommendations\n- Story previews before login"
+					},
+					"response": []
+				}
+			]
 		}
 	]
 }
