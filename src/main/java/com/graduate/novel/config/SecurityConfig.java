@@ -46,6 +46,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/user/forgot-password", "/api/user/reset-password").permitAll()
                         // Swagger/OpenAPI endpoints - no token required
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                        // Error endpoint - no token required
+                        .requestMatchers("/error").permitAll()
                         // Health check endpoints - no token required
                         .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health", "/api/crawl/health", "/api/ai/health").permitAll()
                         // AI semantic search endpoint - no token required
@@ -113,6 +115,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.sendError(401, "Unauthorized: " + authException.getMessage());
+                        })
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
