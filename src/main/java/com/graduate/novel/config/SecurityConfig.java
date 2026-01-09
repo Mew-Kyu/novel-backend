@@ -118,7 +118,7 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
-                            response.sendError(401, "Unauthorized: " + authException.getMessage());
+                            response.sendError(401, "Unauthorized access");
                         })
                 )
                 .sessionManagement(session -> session
