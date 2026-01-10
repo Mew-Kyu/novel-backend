@@ -5,7 +5,6 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.License;
-import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +40,7 @@ public class OpenApiConfig {
                                 - 🕷️ Web Crawling for content
                                 
                                 ### Authentication:
-                                Most endpoints require JWT authentication. 
+                                Most endpoints require JWT authentication.
                                 1. Login via `/api/auth/login`
                                 2. Use the returned `accessToken` in the Authorization header
                                 3. Format: `Bearer {token}`
@@ -59,15 +58,16 @@ public class OpenApiConfig {
                         new Server()
                                 .url("https://api.novel-backend.com")
                                 .description("Production Server")))
-                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
+                // Don't add global security - endpoints will specify via @SecurityRequirement annotation
+                // This prevents Swagger UI from requiring auth for public endpoints
                 .components(new Components()
-                        .addSecuritySchemes("Bearer Authentication",
+                        .addSecuritySchemes("bearerAuth",
                                 new SecurityScheme()
-                                        .name("Bearer Authentication")
+                                        .name("bearerAuth")
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("Enter JWT token obtained from login")));
+                                        .description("Enter JWT token obtained from login endpoint (/api/auth/login)")));
     }
 }
 

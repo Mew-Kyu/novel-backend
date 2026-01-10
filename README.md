@@ -1,6 +1,40 @@
 # Novel Backend
 
-## 🎉 NEW: Auto-Generate Frontend Code!
+## 🎉 NEW: Advanced Recommendation System!
+
+**Enhanced with AI-powered features:**
+
+### ✨ Latest Features (January 2026)
+
+#### 🎯 Recommendation Metrics & Evaluation
+- **Precision@K, Recall@K, F1@K** - Measure recommendation accuracy
+- **MAP@K, NDCG@K, MRR** - Evaluate ranking quality
+- **Coverage & Diversity** - Track recommendation breadth
+- **Offline Evaluation Framework** - A/B testing support
+
+#### 👤 Enhanced User Profiles
+- **Profile Embeddings** - Weighted average of read stories with time decay
+- **Reading Velocity** - Chapters per week tracking
+- **Completion Rate** - Story completion percentage
+- **Genre Diversity Score** - Shannon entropy of genre preferences
+
+#### 🧠 Multiple Embedding Methods
+- **TF-IDF** - Fast, local, no API required
+- **Word2Vec** - Good quality semantic embeddings
+- **Gemini AI** - High-quality cloud embeddings (existing)
+- **Auto Fallback** - Intelligent strategy switching
+
+#### 🚀 Cold-Start Solutions
+- **New User Strategy** - Trending + popular stories for beginners
+- **New Item Strategy** - Boost recently added stories
+- **Onboarding Questionnaire** - Capture initial preferences
+- **Mixed Recommendations** - Combine multiple strategies
+
+**See detailed documentation:** [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md) | [BUILD_SUCCESS.md](BUILD_SUCCESS.md)
+
+---
+
+## 🎉 Auto-Generate Frontend Code!
 
 **Generate TypeScript code tự động từ backend trong 5 giây:**
 

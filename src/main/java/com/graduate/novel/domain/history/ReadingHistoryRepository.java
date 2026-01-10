@@ -22,4 +22,7 @@ public interface ReadingHistoryRepository extends JpaRepository<ReadingHistory, 
     // Keep the non-locking version for read-only operations
     @Query("SELECT h FROM ReadingHistory h WHERE h.user.id = :userId AND h.story.id = :storyId ORDER BY h.lastReadAt DESC LIMIT 1")
     Optional<ReadingHistory> findByUserIdAndStoryId(@Param("userId") Long userId, @Param("storyId") Long storyId);
+
+    // Count methods for cold-start detection
+    long countByUserId(Long userId);
 }

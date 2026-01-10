@@ -2812,6 +2812,297 @@
 						"description": "**Get similar stories (public access - no authentication)**\n\n**Algorithm: Same as authenticated version**\n- Semantic similarity using embeddings\n- Genre-based fallback\n- Does NOT exclude user's read stories (anonymous)\n\n**Differences from authenticated endpoint:**\n- ✅ No authentication required\n- ✅ Works for anonymous users\n- ✅ SEO-friendly (crawlable by search engines)\n- ❌ Cannot personalize based on user's read history\n\n**Requirements:**\n- No authentication required\n- Story ID must exist\n\n**Use Cases:**\n- Similar stories for anonymous users\n- Public story browsing\n- SEO-friendly recommendations\n- Story previews before login"
 					},
 					"response": []
+				},
+				{
+					"name": "Get Cold-Start Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/cold-start?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "cold-start"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Number of recommendations"
+								}
+							]
+						},
+						"description": "**Get cold-start recommendations for new users**\n\n**Cold-Start Strategies:**\n1. **New User Strategy** (≤3 interactions)\n   - 70% Trending stories\n   - 30% High-rated stories\n2. **Onboarding-Based** (if user completed onboarding)\n   - Recommend based on preferred genres\n3. **New Item Strategy** (for recent stories)\n   - Boost stories < 14 days old\n\n**Requires:** Authentication\n\n**Use Cases:**\n- First-time user recommendations\n- Users with minimal reading history\n- Bootstrap personalization"
+					},
+					"response": []
+				},
+				{
+					"name": "Check Cold-Start Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/cold-start/check",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "cold-start", "check"]
+						},
+						"description": "**Check if user is in cold-start state**\n\nReturns:\n```json\n{\n  \"isColdStart\": true,\n  \"recommendedStrategy\": \"NEW_USER\",\n  \"interactionCount\": 2\n}\n```\n\n**Requires:** Authentication"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Recommendation Metrics (ADMIN)",
+			"description": "Endpoints for evaluating recommendation system quality. Requires ADMIN role.",
+			"item": [
+				{
+					"name": "Get User Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/metrics/user/1?k=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "metrics", "user", "1"],
+							"query": [
+								{
+									"key": "k",
+									"value": "10",
+									"description": "Top-K recommendations to evaluate"
+								}
+							]
+						},
+						"description": "**Calculate recommendation metrics for specific user**\n\n**Metrics Calculated:**\n- Precision@K\n- Recall@K\n- F1-Score@K\n- MAP@K (Mean Average Precision)\n- NDCG@K (Normalized Discounted Cumulative Gain)\n- MRR (Mean Reciprocal Rank)\n- Coverage\n- Diversity\n\n**Requires:** ADMIN role\n\n**Use Cases:**\n- Evaluate recommendation quality for individual user\n- Debug recommendation algorithm\n- Monitor user experience"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Aggregate Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/metrics/aggregate?userIds=1,2,3&k=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "metrics", "aggregate"],
+							"query": [
+								{
+									"key": "userIds",
+									"value": "1,2,3",
+									"description": "Comma-separated user IDs"
+								},
+								{
+									"key": "k",
+									"value": "10"
+								}
+							]
+						},
+						"description": "**Calculate aggregate metrics across multiple users**\n\n**Requires:** ADMIN role"
+					},
+					"response": []
+				},
+				{
+					"name": "Evaluate System",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/metrics/evaluate-system?maxUsers=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "metrics", "evaluate-system"],
+							"query": [
+								{
+									"key": "maxUsers",
+									"value": "10",
+									"description": "Max users to evaluate (for performance)"
+								}
+							]
+						},
+						"description": "**Run full system evaluation**\n\nEvaluates recommendation quality across random sample of users.\n\n**Warning:** Can be slow with many users.\n\n**Requires:** ADMIN role"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Evaluation Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recommendations/metrics/evaluate-system/summary?maxUsers=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recommendations", "metrics", "evaluate-system", "summary"],
+							"query": [
+								{
+									"key": "maxUsers",
+									"value": "10"
+								}
+							]
+						},
+						"description": "**Get formatted summary of system evaluation**\n\nReturns human-readable text summary.\n\n**Requires:** ADMIN role"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Analytics",
+			"description": "User profile analytics and behavior metrics",
+			"item": [
+				{
+					"name": "Get User Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/user/analytics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "analytics"]
+						},
+						"description": "**Get detailed user analytics profile**\n\nReturns:\n- Profile embedding (weighted average of read stories)\n- Total stories/chapters read\n- Average completion rate\n- Reading velocity (chapters per week)\n- Genre diversity score\n- Last profile update timestamp\n\n**Requires:** Authentication\n\n**Use Cases:**\n- User dashboard analytics\n- Reading behavior insights\n- Personalization data"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Analytics",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/user/analytics/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "analytics", "refresh"]
+						},
+						"description": "**Manually trigger profile analytics update**\n\nRecalculates:\n- Reading metrics\n- Completion rate\n- Reading velocity\n- Genre diversity\n\n**Requires:** Authentication\n\n**When to use:**\n- After reading several stories\n- When recommendations seem stale\n- Manual profile refresh"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Profile Embedding",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/user/analytics/refresh-embedding",
+							"host": ["{{base_url}}"],
+							"path": ["api", "user", "analytics", "refresh-embedding"]
+						},
+						"description": "**Update user profile embedding**\n\nRecalculates weighted average of story embeddings with time decay.\n\n**Time Decay:**\n- Recent stories: Higher weight\n- Older stories: Lower weight (exponential decay)\n\n**Requires:** Authentication\n\n**Computationally expensive** - use sparingly"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Onboarding",
+			"description": "User onboarding and preference collection",
+			"item": [
+				{
+					"name": "Save Onboarding Preferences",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"preferredGenreIds\": [1, 2, 3],\n  \"readingFrequency\": \"DAILY\",\n  \"preferredLength\": \"MEDIUM\",\n  \"completionPreference\": \"BALANCED\",\n  \"explorationPreference\": \"ADVENTUROUS\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/onboarding/preferences",
+							"host": ["{{base_url}}"],
+							"path": ["api", "onboarding", "preferences"]
+						},
+						"description": "**Save user preferences from onboarding**\n\n**Reading Frequency:**\n- DAILY, WEEKLY, MONTHLY, CASUAL\n\n**Preferred Length:**\n- SHORT, MEDIUM, LONG, EPIC, ANY\n\n**Completion Preference:**\n- COMPLETIONIST: Prefers to finish stories\n- EXPLORER: Tries many stories, doesn't always finish\n- BALANCED: Mix of both\n\n**Exploration Preference:**\n- SAFE: Stick to known genres\n- ADVENTUROUS: Try new genres\n- BALANCED: Mix of both\n\n**Requires:** Authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Onboarding Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/onboarding/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "onboarding", "status"]
+						},
+						"description": "**Check if user has completed onboarding**\n\nReturns:\n```json\n{\n  \"completed\": true,\n  \"onboarding\": {\n    \"preferredGenres\": \"1,2,3\",\n    \"readingFrequency\": \"DAILY\",\n    ...\n  }\n}\n```\n\n**Requires:** Authentication"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Onboarding Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/onboarding/recommendations?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "onboarding", "recommendations"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "**Get recommendations based on onboarding preferences**\n\nUses preferred genres from onboarding to recommend stories.\n\n**Requires:** \n- Authentication\n- Completed onboarding"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "AI Embeddings (ADMIN/MODERATOR)",
+			"description": "Embedding generation and comparison tools",
+			"item": [
+				{
+					"name": "Generate Embedding",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"A fantasy adventure story about a young wizard\",\n  \"strategy\": \"AUTO\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ai/embeddings/generate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "embeddings", "generate"]
+						},
+						"description": "**Generate text embedding using specified strategy**\n\n**Strategies:**\n- **GEMINI**: Cloud API, 768-dim, best quality\n- **WORD2VEC**: Local, 300-dim, good quality\n- **TFIDF**: Local, 500-dim, fast\n- **AUTO**: Auto-fallback (Gemini → Word2Vec → TF-IDF)\n\n**Requires:** ADMIN or MODERATOR role\n\n**Response:**\n```json\n{\n  \"embedding\": [0.1, 0.2, ...],\n  \"dimension\": 768,\n  \"strategy\": \"GEMINI\",\n  \"text\": \"...\"\n}\n```"
+					},
+					"response": []
+				},
+				{
+					"name": "Compare Embedding Strategies",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/plain"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "A fantasy adventure story about a young wizard discovering their magical powers"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ai/embeddings/compare",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ai", "embeddings", "compare"]
+						},
+						"description": "**Compare all embedding strategies for given text**\n\nTests all available strategies and returns:\n- Dimension for each strategy\n- Execution time\n- Success/error status\n\n**Requires:** ADMIN or MODERATOR role\n\n**Use Cases:**\n- Benchmark embedding performance\n- Compare quality vs speed tradeoffs\n- Debug embedding issues"
+					},
+					"response": []
 				}
 			]
 		}

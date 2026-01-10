@@ -2,6 +2,8 @@ package com.graduate.novel.controller;
 
 import com.graduate.novel.domain.recommendation.RecommendationDto;
 import com.graduate.novel.domain.recommendation.RecommendationService;
+import com.graduate.novel.domain.recommendation.coldstart.ColdStartService;
+import com.graduate.novel.domain.story.StoryDto;
 import com.graduate.novel.domain.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/recommendations")
 @RequiredArgsConstructor
@@ -25,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 public class RecommendationController {
 
     private final RecommendationService recommendationService;
+    private final ColdStartService coldStartService;
 
     /**
      * Get personalized recommendations for current user - "Có thể bạn sẽ thích"
@@ -206,6 +211,62 @@ public class RecommendationController {
             limit
         );
         return ResponseEntity.ok(recommendations);
+    }
+
+    /**
+     * Get recommendations for new users (cold-start)
+     */
+    @GetMapping("/cold-start")
+    @Operation(
+        summary = "Get cold-start recommendations",
+        description = "Get recommendations for new users with little to no interaction history.\n\n" +
+            "**Features:**\n" +
+            "- Automatically detects if user is in cold-start state\n" +
+            "- Uses trending and popular stories for new users\n" +
+            "- Can be combined with onboarding preferences\n" +
+            "- Gradually transitions to personalized recommendations as user interacts",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<List<StoryDto>> getColdStartRecommendations(
+        @AuthenticationPrincipal User currentUser,
+        @RequestParam(defaultValue = "10") int limit
+    ) {
+        log.info("Getting cold-start recommendations for user: {}", currentUser.getId());
+        List<StoryDto> recommendations = coldStartService.getMixedRecommendations(
+            currentUser.getId(),
+            limit
+        );
+        return ResponseEntity.ok(recommendations);
+    }
+
+    /**
+     * Check if user is in cold-start state
+     */
+    @GetMapping("/cold-start/check")
+    @Operation(
+        summary = "Check if user is in cold-start state",
+        description = "Determine if user needs cold-start recommendations",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<ColdStartStatusResponse> checkColdStartStatus(
+        @AuthenticationPrincipal User currentUser
+    ) {
+        boolean isColdStart = coldStartService.isUserColdStart(currentUser.getId());
+        String strategy = coldStartService.getRecommendedStrategy(currentUser.getId());
+
+        return ResponseEntity.ok(ColdStartStatusResponse.builder()
+            .isColdStart(isColdStart)
+            .recommendedStrategy(strategy)
+            .build());
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class ColdStartStatusResponse {
+        private Boolean isColdStart;
+        private String recommendedStrategy;
     }
 }
 

@@ -41,13 +41,17 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Spring Boot default endpoints - no token required
+                        .requestMatchers("/error", "/error/**").permitAll()
                         // Authentication endpoints - no token required
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/user/forgot-password", "/api/user/reset-password").permitAll()
                         // Swagger/OpenAPI endpoints - no token required
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         // Health check endpoints - no token required
-                        .requestMatchers("/actuator/health", "/api/health", "/health", "/api/*/health", "/api/crawl/health", "/api/ai/health").permitAll()
+                        .requestMatchers("/actuator/health", "/api/health", "/health").permitAll()
+                        .requestMatchers("/api/*/health").permitAll() // Pattern for all module health checks
+                        .requestMatchers("/api/crawl/health", "/api/ai/health").permitAll() // Explicit health checks
                         // AI semantic search endpoint - no token required
                         .requestMatchers(HttpMethod.POST, "/api/ai/search/semantic").permitAll()
                         // AI translation endpoints - requires ADMIN or MODERATOR role
@@ -95,9 +99,22 @@ public class SecurityConfig {
                         // Admin/Moderator rating and comment management - requires ADMIN or MODERATOR role
                         .requestMatchers("/api/ratings/admin/**").hasAnyRole("ADMIN", "MODERATOR")
                         .requestMatchers("/api/comments/admin/**").hasAnyRole("ADMIN", "MODERATOR")
-                        // Recommendation endpoints - PUBLIC endpoint MUST come FIRST
-                        .requestMatchers(HttpMethod.GET, "/api/recommendations/similar/*/public").permitAll() // Public similar stories - no auth required
-                        .requestMatchers("/api/recommendations/**").authenticated() // All other recommendation endpoints - require auth
+
+                        // === RECOMMENDATION ENDPOINTS - Order matters! Most specific first ===
+                        // Metrics endpoints - requires ADMIN role (MUST be before general /api/recommendations/**)
+                        .requestMatchers("/api/recommendations/metrics/**").hasRole("ADMIN")
+                        // Public similar stories - no auth required (MUST be before general /api/recommendations/**)
+                        .requestMatchers(HttpMethod.GET, "/api/recommendations/similar/*/public").permitAll()
+                        // Cold-start endpoints - require authentication
+                        .requestMatchers("/api/recommendations/cold-start/**").authenticated()
+                        // All other recommendation endpoints - require authentication
+                        .requestMatchers("/api/recommendations/**").authenticated()
+
+                        // Onboarding endpoints - require authentication
+                        .requestMatchers("/api/onboarding/**").authenticated()
+
+                        // User analytics endpoints - require authentication
+                        .requestMatchers("/api/user/analytics/**").authenticated()
                         // Export endpoints - requires authentication but allows all roles
                         .requestMatchers(HttpMethod.GET, "/api/export/*/epub").authenticated() // GET /api/export/{storyId}/epub
                         // Cloudinary upload endpoint - requires ADMIN or MODERATOR role
@@ -113,6 +130,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // All other endpoints require authentication
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            // Return 401 for unauthenticated requests instead of 403
+                            response.sendError(401, "Unauthorized: " + authException.getMessage());
+                        })
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
