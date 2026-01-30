@@ -47,14 +47,9 @@ public class MetricsService {
         }
 
         // TRAIN-TEST SPLIT: Split relevant items into 80% training, 20% test
-        List<Long> relevantList = new ArrayList<>(allRelevantItems);
-        Collections.shuffle(relevantList, new Random(userId)); // Deterministic shuffle based on userId
+        TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
 
-        int splitIndex = (int) (relevantList.size() * 0.8);
-        Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
-        Set<Long> testSet = new HashSet<>(relevantList.subList(splitIndex, relevantList.size()));
-
-        if (testSet.isEmpty()) {
+        if (split.testSet.isEmpty()) {
             log.warn("User {} has insufficient relevant items for train-test split (total: {})",
                 userId, allRelevantItems.size());
             return RecommendationMetrics.builder()
@@ -63,10 +58,10 @@ public class MetricsService {
                 .build();
         }
 
-        log.info("User {} - Training set: {}, Test set: {}", userId, trainingSet.size(), testSet.size());
+        log.info("User {} - Training set: {}, Test set: {}", userId, split.trainingSet.size(), split.testSet.size());
 
         // Get recommendations - exclude only training set (simulate hiding test interactions)
-        var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
+        var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, split.trainingSet);
         List<Long> recommendedIds = recommendations.getStories().stream()
             .map(StoryDto::id)
             .collect(Collectors.toList());
@@ -74,12 +69,12 @@ public class MetricsService {
         log.info("User {} - Recommended {} items", userId, recommendedIds.size());
 
         // Calculate metrics - evaluate against test set
-        double precision = calculatePrecisionAtK(recommendedIds, testSet, k);
-        double recall = calculateRecallAtK(recommendedIds, testSet, k);
+        double precision = calculatePrecisionAtK(recommendedIds, split.testSet, k);
+        double recall = calculateRecallAtK(recommendedIds, split.testSet, k);
         double f1Score = calculateF1Score(precision, recall);
-        double map = calculateMAP(recommendedIds, testSet, k);
-        double ndcg = calculateNDCG(recommendedIds, testSet, k);
-        double mrr = calculateMRR(recommendedIds, testSet);
+        double map = calculateMAP(recommendedIds, split.testSet, k);
+        double ndcg = calculateNDCG(recommendedIds, split.testSet, k);
+        double mrr = calculateMRR(recommendedIds, split.testSet);
 
         return RecommendationMetrics.builder()
             .precisionAtK(precision)
@@ -273,12 +268,9 @@ public class MetricsService {
                 Set<Long> allRelevantItems = getRelevantItems(userId);
                 if (allRelevantItems.size() < 2) continue;
 
-                List<Long> relevantList = new ArrayList<>(allRelevantItems);
-                Collections.shuffle(relevantList, new Random(userId));
-                int splitIndex = (int) (relevantList.size() * 0.8);
-                Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
+                TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
 
-                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
+                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, split.trainingSet);
                 recommendations.getStories().forEach(story ->
                     allRecommendedItems.add(story.id())
                 );
@@ -305,12 +297,9 @@ public class MetricsService {
                 Set<Long> allRelevantItems = getRelevantItems(userId);
                 if (allRelevantItems.size() < 2) continue;
 
-                List<Long> relevantList = new ArrayList<>(allRelevantItems);
-                Collections.shuffle(relevantList, new Random(userId));
-                int splitIndex = (int) (relevantList.size() * 0.8);
-                Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
+                TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
 
-                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
+                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, split.trainingSet);
 
                 // Count unique genres in recommendations
                 Set<String> uniqueGenres = new HashSet<>();
@@ -336,6 +325,34 @@ public class MetricsService {
     }
 
     // ========== Helper Methods ==========
+
+    /**
+     * Container for train-test split results
+     */
+    private static class TrainTestSplit {
+        final Set<Long> trainingSet;
+        final Set<Long> testSet;
+
+        TrainTestSplit(Set<Long> trainingSet, Set<Long> testSet) {
+            this.trainingSet = trainingSet;
+            this.testSet = testSet;
+        }
+    }
+
+    /**
+     * Split relevant items into 80% training and 20% test sets
+     * Uses deterministic shuffle based on userId for reproducibility
+     */
+    private TrainTestSplit createTrainTestSplit(Set<Long> allRelevantItems, Long userId) {
+        List<Long> relevantList = new ArrayList<>(allRelevantItems);
+        Collections.shuffle(relevantList, new Random(userId)); // Deterministic shuffle based on userId
+
+        int splitIndex = (int) (relevantList.size() * 0.8);
+        Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
+        Set<Long> testSet = new HashSet<>(relevantList.subList(splitIndex, relevantList.size()));
+
+        return new TrainTestSplit(trainingSet, testSet);
+    }
 
     /**
      * Get items that user actually liked (ground truth)

@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused") // semanticSearchService may be used for future semantic search features
 public class RecommendationService {
 
     private final UserPreferenceService userPreferenceService;
@@ -211,7 +212,7 @@ public class RecommendationService {
 
         // 1. Try semantic similarity first (if embeddings exist)
         if (sourceStory.getEmbedding() != null && !sourceStory.getEmbedding().isEmpty()
-            && !sourceStory.getEmbedding().equals("") && !sourceStory.getEmbedding().equals("[]")) {
+            && !sourceStory.getEmbedding().equals("[]")) {
             try {
                 log.debug("Attempting semantic similarity search for story: {}", storyId);
                 List<Long> similarIds = storyRepository.findStoryIdsBySimilarity(
@@ -249,7 +250,7 @@ public class RecommendationService {
                     .filter(s -> !excludeStoryIds.contains(s.getId()))
                     .filter(s -> !similarStories.contains(s))
                     .limit(limit - similarStories.size())
-                    .collect(Collectors.toList());
+                    .toList();
 
                 similarStories.addAll(filtered);
                 log.info("Added {} genre-based similar stories", filtered.size());
@@ -268,7 +269,7 @@ public class RecommendationService {
                 List<Story> filtered = trending.getContent().stream()
                     .filter(s -> !excludeStoryIds.contains(s.getId()))
                     .limit(limit)
-                    .collect(Collectors.toList());
+                    .toList();
 
                 similarStories.addAll(filtered);
                 log.info("Added {} trending stories as fallback", filtered.size());
@@ -323,7 +324,7 @@ public class RecommendationService {
                 .filter(s -> !excludeIds.contains(s.getId()))
                 .filter(s -> !recommendations.contains(s))
                 .limit(needed)
-                .collect(Collectors.toList());
+                .toList();
 
             recommendations.addAll(filtered);
         }
