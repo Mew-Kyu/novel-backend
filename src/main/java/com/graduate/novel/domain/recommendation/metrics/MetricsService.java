@@ -3,7 +3,6 @@ package com.graduate.novel.domain.recommendation.metrics;
 import com.graduate.novel.domain.favorite.FavoriteRepository;
 import com.graduate.novel.domain.rating.RatingRepository;
 import com.graduate.novel.domain.recommendation.RecommendationService;
-import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryDto;
 import com.graduate.novel.domain.user.User;
 import com.graduate.novel.domain.user.UserRepository;
@@ -36,10 +35,10 @@ public class MetricsService {
     public RecommendationMetrics calculateMetrics(Long userId, int k) {
         log.info("Calculating metrics for user {} with K={}", userId, k);
 
-        // Get ground truth (items user actually liked)
-        Set<Long> relevantItems = getRelevantItems(userId);
+        // Get ALL relevant items (items user actually liked)
+        Set<Long> allRelevantItems = getRelevantItems(userId);
 
-        if (relevantItems.isEmpty()) {
+        if (allRelevantItems.isEmpty()) {
             log.warn("User {} has no relevant items, cannot calculate metrics", userId);
             return RecommendationMetrics.builder()
                 .k(k)
@@ -47,19 +46,40 @@ public class MetricsService {
                 .build();
         }
 
-        // Get recommendations
-        var recommendations = recommendationService.getHybridRecommendations(userId, k);
+        // TRAIN-TEST SPLIT: Split relevant items into 80% training, 20% test
+        List<Long> relevantList = new ArrayList<>(allRelevantItems);
+        Collections.shuffle(relevantList, new Random(userId)); // Deterministic shuffle based on userId
+
+        int splitIndex = (int) (relevantList.size() * 0.8);
+        Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
+        Set<Long> testSet = new HashSet<>(relevantList.subList(splitIndex, relevantList.size()));
+
+        if (testSet.isEmpty()) {
+            log.warn("User {} has insufficient relevant items for train-test split (total: {})",
+                userId, allRelevantItems.size());
+            return RecommendationMetrics.builder()
+                .k(k)
+                .totalUsers(1)
+                .build();
+        }
+
+        log.info("User {} - Training set: {}, Test set: {}", userId, trainingSet.size(), testSet.size());
+
+        // Get recommendations - exclude only training set (simulate hiding test interactions)
+        var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
         List<Long> recommendedIds = recommendations.getStories().stream()
             .map(StoryDto::id)
             .collect(Collectors.toList());
 
-        // Calculate metrics
-        double precision = calculatePrecisionAtK(recommendedIds, relevantItems, k);
-        double recall = calculateRecallAtK(recommendedIds, relevantItems, k);
+        log.info("User {} - Recommended {} items", userId, recommendedIds.size());
+
+        // Calculate metrics - evaluate against test set
+        double precision = calculatePrecisionAtK(recommendedIds, testSet, k);
+        double recall = calculateRecallAtK(recommendedIds, testSet, k);
         double f1Score = calculateF1Score(precision, recall);
-        double map = calculateMAP(recommendedIds, relevantItems, k);
-        double ndcg = calculateNDCG(recommendedIds, relevantItems, k);
-        double mrr = calculateMRR(recommendedIds, relevantItems);
+        double map = calculateMAP(recommendedIds, testSet, k);
+        double ndcg = calculateNDCG(recommendedIds, testSet, k);
+        double mrr = calculateMRR(recommendedIds, testSet);
 
         return RecommendationMetrics.builder()
             .precisionAtK(precision)
@@ -249,7 +269,16 @@ public class MetricsService {
 
         for (Long userId : userIds) {
             try {
-                var recommendations = recommendationService.getHybridRecommendations(userId, k);
+                // Get relevant items and split for training
+                Set<Long> allRelevantItems = getRelevantItems(userId);
+                if (allRelevantItems.size() < 2) continue;
+
+                List<Long> relevantList = new ArrayList<>(allRelevantItems);
+                Collections.shuffle(relevantList, new Random(userId));
+                int splitIndex = (int) (relevantList.size() * 0.8);
+                Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
+
+                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
                 recommendations.getStories().forEach(story ->
                     allRecommendedItems.add(story.id())
                 );
@@ -260,7 +289,7 @@ public class MetricsService {
 
         // This is a simplified version - ideally you'd divide by total items in catalog
         // For now, return the count (can be normalized later with total story count)
-        return (double) allRecommendedItems.size();
+        return allRecommendedItems.size();
     }
 
     /**
@@ -272,7 +301,16 @@ public class MetricsService {
 
         for (Long userId : userIds) {
             try {
-                var recommendations = recommendationService.getHybridRecommendations(userId, k);
+                // Get relevant items and split for training
+                Set<Long> allRelevantItems = getRelevantItems(userId);
+                if (allRelevantItems.size() < 2) continue;
+
+                List<Long> relevantList = new ArrayList<>(allRelevantItems);
+                Collections.shuffle(relevantList, new Random(userId));
+                int splitIndex = (int) (relevantList.size() * 0.8);
+                Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
+
+                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
 
                 // Count unique genres in recommendations
                 Set<String> uniqueGenres = new HashSet<>();

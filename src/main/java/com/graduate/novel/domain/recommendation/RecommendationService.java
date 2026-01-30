@@ -37,6 +37,16 @@ public class RecommendationService {
         // Get stories to exclude (already interacted)
         Set<Long> excludeStoryIds = userPreferenceService.getUserInteractedStoryIds(userId);
 
+        return getHybridRecommendationsWithExclusions(userId, limit, excludeStoryIds);
+    }
+
+    /**
+     * Get hybrid recommendations with custom exclusion list (for evaluation)
+     */
+    @Transactional(readOnly = true)
+    public RecommendationDto getHybridRecommendationsWithExclusions(Long userId, int limit, Set<Long> excludeStoryIds) {
+        log.info("Generating hybrid recommendations for user {} with {} exclusions", userId, excludeStoryIds.size());
+
         // Combine multiple recommendation sources with weights
         Map<Long, Double> storyScores = new HashMap<>();
 
