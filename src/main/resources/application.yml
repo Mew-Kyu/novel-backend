@@ -96,7 +96,7 @@ gemini:
     model:
       text: gemini-2.5-flash
       embedding: text-embedding-004
-    timeout: 90000
+    timeout: 180000  # Increased to 180 seconds (3 minutes) to handle long translations
     max-retries: 3
 
 app:

@@ -299,7 +299,8 @@ public class MetricsService {
 
                 TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
 
-                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, split.trainingSet);
+                var recommendations = recommendationService.getHybridRecommendationsWithExclusions
+                        (userId, k, split.trainingSet);
 
                 // Count unique genres in recommendations
                 Set<String> uniqueGenres = new HashSet<>();

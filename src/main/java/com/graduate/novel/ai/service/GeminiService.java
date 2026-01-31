@@ -98,6 +98,30 @@ public class GeminiService {
                 log.error("Response body: {}", e.getResponseBodyAsString());
                 throw new RuntimeException("Failed to generate content: " + e.getMessage(), e);
 
+            } catch (org.springframework.web.client.ResourceAccessException e) {
+                // This catches network-related issues including connection timeouts and client disconnects
+                log.error("Network error calling Gemini API: {}", e.getMessage());
+
+                // Check if it's a timeout or connection issue
+                if (e.getMessage() != null && (e.getMessage().contains("timeout") ||
+                    e.getMessage().contains("timed out") ||
+                    e.getMessage().contains("connection was aborted"))) {
+                    retries++;
+                    if (retries <= maxRetries) {
+                        log.warn("Connection/timeout issue. Retrying in {} ms... (attempt {}/{})",
+                                retryDelay, retries, maxRetries);
+                        try {
+                            Thread.sleep(retryDelay);
+                            retryDelay *= 2; // Exponential backoff
+                            continue; // Retry the request
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Interrupted while waiting to retry", ie);
+                        }
+                    }
+                }
+                throw new RuntimeException("Network error calling Gemini API: " + e.getMessage(), e);
+
             } catch (Exception e) {
                 log.error("Error calling Gemini API: {}", e.getMessage(), e);
                 throw new RuntimeException("Failed to generate content from Gemini API", e);
@@ -178,6 +202,30 @@ public class GeminiService {
                 log.error("HTTP Client Error ({}): {}", e.getStatusCode(), e.getMessage());
                 log.error("Response body: {}", e.getResponseBodyAsString());
                 throw new RuntimeException("Failed to generate embedding: " + e.getMessage(), e);
+
+            } catch (org.springframework.web.client.ResourceAccessException e) {
+                // This catches network-related issues including connection timeouts and client disconnects
+                log.error("Network error generating embedding: {}", e.getMessage());
+
+                // Check if it's a timeout or connection issue
+                if (e.getMessage() != null && (e.getMessage().contains("timeout") ||
+                    e.getMessage().contains("timed out") ||
+                    e.getMessage().contains("connection was aborted"))) {
+                    retries++;
+                    if (retries <= maxRetries) {
+                        log.warn("Connection/timeout issue. Retrying in {} ms... (attempt {}/{})",
+                                retryDelay, retries, maxRetries);
+                        try {
+                            Thread.sleep(retryDelay);
+                            retryDelay *= 2; // Exponential backoff
+                            continue; // Retry the request
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Interrupted while waiting to retry", ie);
+                        }
+                    }
+                }
+                throw new RuntimeException("Network error generating embedding: " + e.getMessage(), e);
 
             } catch (Exception e) {
                 log.error("Error generating embedding from Gemini API: {}", e.getMessage(), e);

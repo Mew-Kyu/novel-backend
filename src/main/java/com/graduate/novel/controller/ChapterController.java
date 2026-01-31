@@ -7,6 +7,7 @@ import com.graduate.novel.domain.chapter.UpdateChapterRequest;
 import com.graduate.novel.domain.chapter.UpdateChapterTranslationRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/stories/{storyId}/chapters")
 @RequiredArgsConstructor
+@Slf4j
 public class ChapterController {
 
     private final ChapterService chapterService;
@@ -119,15 +121,30 @@ public class ChapterController {
 
     /**
      * Automatically translate a chapter using AI
+     * Returns immediately with 202 Accepted and runs translation in background
      */
     @PostMapping("/{chapterId}/translate")
     @PreAuthorize("hasRole('ADMIN') or (hasRole('MODERATOR') and @securityExpressionHandler.canModifyChapter(authentication, #storyId, #chapterId))")
-    public ResponseEntity<ChapterDto> translateChapter(
+    public ResponseEntity<Map<String, Object>> translateChapter(
             @PathVariable Long storyId,
             @PathVariable Long chapterId
     ) {
-        ChapterDto chapter = chapterService.translateChapter(storyId, chapterId);
-        return ResponseEntity.ok(chapter);
+        // Run translation in background to avoid client timeout
+        new Thread(() -> {
+            try {
+                chapterService.translateChapter(storyId, chapterId);
+            } catch (Exception e) {
+                log.error("Background translation failed for chapterId={}: {}", chapterId, e.getMessage());
+            }
+        }).start();
+
+        Map<String, Object> response = Map.of(
+                "message", "Translation started for chapter",
+                "storyId", storyId,
+                "chapterId", chapterId,
+                "status", "PENDING"
+        );
+        return ResponseEntity.accepted().body(response);
     }
 
     /**

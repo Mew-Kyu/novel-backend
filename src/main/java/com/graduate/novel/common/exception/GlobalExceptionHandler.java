@@ -3,6 +3,7 @@ package com.graduate.novel.common.exception;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,12 +14,42 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    /**
+     * Handle client disconnect exceptions (when client closes connection before response is sent)
+     * This is normal behavior and shouldn't be logged as an error
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public void handleClientAbortException(ClientAbortException ex) {
+        // Log at debug level since this is often expected behavior
+        // (e.g., user navigates away, connection timeout, etc.)
+        log.debug("Client aborted connection: {}", ex.getMessage());
+        // No response needed as client already disconnected
+    }
+
+    /**
+     * Handle general IO exceptions that may occur during response writing
+     */
+    @ExceptionHandler(IOException.class)
+    public void handleIOException(IOException ex) {
+        // Check if it's a client disconnect scenario
+        if (ex.getMessage() != null &&
+            (ex.getMessage().contains("connection was aborted") ||
+             ex.getMessage().contains("Broken pipe") ||
+             ex.getMessage().contains("Connection reset"))) {
+            log.debug("Client connection error: {}", ex.getMessage());
+        } else {
+            log.error("IO exception occurred: {}", ex.getMessage(), ex);
+        }
+        // No response can be sent as the connection may be closed
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
