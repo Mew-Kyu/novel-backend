@@ -94,7 +94,7 @@ gemini:
     key: ${GEMINI_API_KEY}
     base-url: https://generativelanguage.googleapis.com/v1beta
     model:
-      text: gemini-2.5-flash
+      text: gemini-3-flash-preview
       embedding: text-embedding-004
     timeout: 180000  # Increased to 180 seconds (3 minutes) to handle long translations
     max-retries: 3

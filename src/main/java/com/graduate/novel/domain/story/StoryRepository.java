@@ -74,4 +74,7 @@ public interface StoryRepository extends JpaRepository<Story, Long> {
     // Total view count
     @Query("SELECT COALESCE(SUM(s.viewCount), 0) FROM Story s")
     Long getTotalViewCount();
+
+    // Count stories created after a given time (for cold-start new item detection)
+    long countByCreatedAtAfter(LocalDateTime since);
 }

@@ -2,6 +2,9 @@ package com.graduate.novel.domain.user;
 
 import com.graduate.novel.common.exception.BadRequestException;
 import com.graduate.novel.common.mapper.UserMapper;
+import com.graduate.novel.domain.onboarding.UserOnboarding;
+import com.graduate.novel.domain.onboarding.UserOnboardingRepository;
+import com.graduate.novel.domain.recommendation.coldstart.ColdStartService;
 import com.graduate.novel.domain.role.Role;
 import com.graduate.novel.domain.role.RoleRepository;
 import com.graduate.novel.security.JwtService;
@@ -26,6 +29,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
     private final EmailService emailService;
+    private final UserOnboardingRepository onboardingRepository;
+    private final ColdStartService coldStartService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -52,13 +57,22 @@ public class AuthService {
         user = userRepository.save(user);
         log.info("User registered successfully: {} with role: {}", user.getEmail(), roleName);
 
+        // Auto-create onboarding record so frontend knows onboarding is pending
+        UserOnboarding onboarding = UserOnboarding.builder()
+                .userId(user.getId())
+                .completed(false)
+                .build();
+        onboardingRepository.save(onboarding);
+        log.info("Created pending onboarding record for user {}", user.getId());
+
         // Send welcome email
         emailService.sendWelcomeEmail(user.getEmail(), user.getDisplayName());
 
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        return new AuthResponse(accessToken, refreshToken, userMapper.toDto(user));
+        // New users are always cold-start and need onboarding
+        return new AuthResponse(accessToken, refreshToken, userMapper.toDto(user), true, true);
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +96,17 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        return new AuthResponse(accessToken, refreshToken, userMapper.toDto(user));
+        boolean isColdStart = coldStartService.isUserColdStart(user.getId());
+        boolean onboardingRequired = onboardingRepository.findByUserId(user.getId())
+                .map(o -> !o.getCompleted())
+                .orElse(true); // No record at all → treat as needing onboarding
+
+        log.info("User {} cold-start={}, onboardingRequired={}", user.getId(), isColdStart, onboardingRequired);
+
+        return new AuthResponse(accessToken, refreshToken, userMapper.toDto(user),
+                isColdStart, onboardingRequired);
     }
 }
+
+
 

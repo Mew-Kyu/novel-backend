@@ -10,6 +10,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -30,18 +34,16 @@ public class TranslationService {
 
         log.info("Translating text from Japanese to Vietnamese (length: {} chars)", japaneseText.length());
 
-        String prompt = buildTranslationPrompt(japaneseText);
-
         // Use specific configuration for translation
         GeminiRequest.GenerationConfig config = GeminiRequest.GenerationConfig.builder()
                 .temperature(0.3)  // Lower temperature for more consistent translations
-                .maxOutputTokens(8192)
+                .maxOutputTokens(65536)  // Maximum tokens to avoid truncation
                 .topP(0.95)
                 .topK(40)
                 .build();
 
         try {
-            String translation = geminiService.generateContent(prompt, config);
+            String translation = translateWithChunkFallback(japaneseText, config, "ja");
             log.info("Translation completed successfully");
             return translation != null ? translation.trim() : "";
         } catch (Exception e) {
@@ -61,17 +63,15 @@ public class TranslationService {
 
         log.info("Translating text from English to Vietnamese (length: {} chars)", englishText.length());
 
-        String prompt = buildEnglishTranslationPrompt(englishText);
-
         GeminiRequest.GenerationConfig config = GeminiRequest.GenerationConfig.builder()
                 .temperature(0.3)
-                .maxOutputTokens(8192)
+                .maxOutputTokens(65536)
                 .topP(0.95)
                 .topK(40)
                 .build();
 
         try {
-            String translation = geminiService.generateContent(prompt, config);
+            String translation = translateWithChunkFallback(englishText, config, "en");
             log.info("Translation completed successfully");
             return translation != null ? translation.trim() : "";
         } catch (Exception e) {
@@ -109,6 +109,67 @@ public class TranslationService {
             log.error("Romanization failed: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to romanize text", e);
         }
+    }
+
+    /**
+     * Translate text with automatic chunk splitting if response is truncated (MAX_TOKENS).
+     * @param text        source text
+     * @param config      Gemini generation config
+     * @param sourceLang  "ja" or "en"
+     */
+    private String translateWithChunkFallback(String text, GeminiRequest.GenerationConfig config, String sourceLang) {
+        String prompt = "ja".equalsIgnoreCase(sourceLang)
+                ? buildTranslationPrompt(text)
+                : buildEnglishTranslationPrompt(text);
+
+        Map.Entry<String, String> result = geminiService.generateContentWithFinishReason(prompt, config);
+
+        if (result == null) {
+            return null;
+        }
+
+        String finishReason = result.getValue();
+        if (!"MAX_TOKENS".equals(finishReason)) {
+            // Normal completion — return as-is
+            return result.getKey();
+        }
+
+        // Response was truncated — split the text into paragraphs and translate chunk by chunk
+        log.warn("Response truncated (MAX_TOKENS). Falling back to chunked translation for text of {} chars.", text.length());
+
+        String[] paragraphs = text.split("(?<=\\n)");
+        // Group paragraphs into chunks of ~1500 chars each
+        int chunkSize = 1500;
+        List<String> chunks = new ArrayList<>();
+        StringBuilder currentChunk = new StringBuilder();
+        for (String para : paragraphs) {
+            if (currentChunk.length() + para.length() > chunkSize && currentChunk.length() > 0) {
+                chunks.add(currentChunk.toString());
+                currentChunk = new StringBuilder();
+            }
+            currentChunk.append(para);
+        }
+        if (currentChunk.length() > 0) {
+            chunks.add(currentChunk.toString());
+        }
+
+        log.info("Chunked translation: splitting into {} chunks", chunks.size());
+        StringBuilder translated = new StringBuilder();
+        for (int i = 0; i < chunks.size(); i++) {
+            String chunkText = chunks.get(i);
+            log.debug("Translating chunk {}/{} ({} chars)", i + 1, chunks.size(), chunkText.length());
+            String chunkPrompt = "ja".equalsIgnoreCase(sourceLang)
+                    ? buildTranslationPrompt(chunkText)
+                    : buildEnglishTranslationPrompt(chunkText);
+            Map.Entry<String, String> chunkResult = geminiService.generateContentWithFinishReason(chunkPrompt, config);
+            if (chunkResult != null && chunkResult.getKey() != null) {
+                translated.append(chunkResult.getKey());
+                if (i < chunks.size() - 1) {
+                    translated.append("\n");
+                }
+            }
+        }
+        return translated.toString();
     }
 
     /**

@@ -1,7 +1,6 @@
 package com.graduate.novel.domain.recommendation.coldstart;
 
 import com.graduate.novel.common.mapper.StoryMapper;
-import com.graduate.novel.domain.story.Story;
 import com.graduate.novel.domain.story.StoryDto;
 import com.graduate.novel.domain.story.StoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -62,9 +61,9 @@ public class NewItemStrategy implements ColdStartStrategy {
     @Override
     public boolean isApplicable(Long userId) {
         // This strategy is supplementary - can be mixed with others
-        // Check if there are new items to explore
+        // Check if there are genuinely NEW items to explore (within the last NEW_ITEM_DAYS days)
         LocalDateTime since = LocalDateTime.now().minusDays(NEW_ITEM_DAYS);
-        long newItemCount = storyRepository.count(); // Simplified check
+        long newItemCount = storyRepository.countByCreatedAtAfter(since);
 
         return newItemCount > 0;
     }

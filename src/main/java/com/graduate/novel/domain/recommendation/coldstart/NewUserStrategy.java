@@ -29,7 +29,8 @@ public class NewUserStrategy implements ColdStartStrategy {
     private final StoryMapper storyMapper;
 
     // Thresholds for considering a user as "new"
-    private static final int MAX_INTERACTIONS = 3;
+    // 10 interactions gives enough data before transitioning to personalized recommendations
+    private static final int MAX_INTERACTIONS = 10;
 
     @Override
     public List<StoryDto> getRecommendations(Long userId, int limit) {

@@ -9,7 +9,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +34,15 @@ public class GeminiService {
      * Generate text content with custom configuration
      */
     public String generateContent(String prompt, GeminiRequest.GenerationConfig config) {
+        Map.Entry<String, String> result = generateContentWithFinishReason(prompt, config);
+        return result != null ? result.getKey() : null;
+    }
+
+    /**
+     * Generate text content and return both the text and finishReason.
+     * Key = generated text, Value = finishReason (e.g. "STOP", "MAX_TOKENS")
+     */
+    public Map.Entry<String, String> generateContentWithFinishReason(String prompt, GeminiRequest.GenerationConfig config) {
         int retries = 0;
         int maxRetries = geminiConfig.getMaxRetries();
         long retryDelay = 2000; // Start with 2 seconds
@@ -59,10 +70,14 @@ public class GeminiService {
                 if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                     GeminiResponse geminiResponse = response.getBody();
                     if (geminiResponse.getCandidates() != null && !geminiResponse.getCandidates().isEmpty()) {
-                        String generatedText = geminiResponse.getCandidates().get(0)
-                                .getContent().getParts().get(0).getText();
-                        log.debug("Successfully generated content from Gemini");
-                        return generatedText;
+                        GeminiResponse.Candidate candidate = geminiResponse.getCandidates().get(0);
+                        String generatedText = candidate.getContent().getParts().get(0).getText();
+                        String finishReason = candidate.getFinishReason();
+                        log.debug("Successfully generated content from Gemini (finishReason: {})", finishReason);
+                        if ("MAX_TOKENS".equals(finishReason)) {
+                            log.warn("Gemini response was truncated due to MAX_TOKENS limit. Consider splitting the input.");
+                        }
+                        return new AbstractMap.SimpleEntry<>(generatedText, finishReason);
                     }
                 }
 
@@ -85,6 +100,23 @@ public class GeminiService {
                 log.warn("Rate limit hit (429). Retrying in {} ms... (attempt {}/{})",
                         retryDelay, retries, maxRetries);
 
+                try {
+                    Thread.sleep(retryDelay);
+                    retryDelay *= 2; // Exponential backoff
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while waiting to retry", ie);
+                }
+
+            } catch (org.springframework.web.client.HttpServerErrorException e) {
+                // 503 Service Unavailable and other 5xx errors — retry with backoff
+                retries++;
+                if (retries > maxRetries) {
+                    log.error("Max retries exceeded after server error ({}). Giving up.", e.getStatusCode());
+                    throw new RuntimeException("Failed to generate content: " + e.getMessage(), e);
+                }
+                log.warn("Server error {} from Gemini API. Retrying in {} ms... (attempt {}/{})",
+                        e.getStatusCode(), retryDelay, retries, maxRetries);
                 try {
                     Thread.sleep(retryDelay);
                     retryDelay *= 2; // Exponential backoff
@@ -193,6 +225,23 @@ public class GeminiService {
                 try {
                     Thread.sleep(retryDelay);
                     retryDelay *= 2; // Exponential backoff
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interrupted while waiting to retry", ie);
+                }
+
+            } catch (org.springframework.web.client.HttpServerErrorException e) {
+                // 503 Service Unavailable and other 5xx errors — retry with backoff
+                retries++;
+                if (retries > maxRetries) {
+                    log.error("Max retries exceeded after server error ({}). Giving up.", e.getStatusCode());
+                    throw new RuntimeException("Failed to generate embedding: " + e.getMessage(), e);
+                }
+                log.warn("Server error {} from Gemini API. Retrying in {} ms... (attempt {}/{})",
+                        e.getStatusCode(), retryDelay, retries, maxRetries);
+                try {
+                    Thread.sleep(retryDelay);
+                    retryDelay *= 2;
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     throw new RuntimeException("Interrupted while waiting to retry", ie);
