@@ -290,7 +290,7 @@ ngrok config add-authtoken <YOUR_AUTHTOKEN>   # ← dán authtoken từ bước 
 
 > Free account được tặng **1 static domain duy nhất** không bao giờ đổi, **không thể tạo thêm**.
 
-Vào **https://dashboard.ngrok.com/domains** → bấm **"New Domain"** → ngrok tự tạo domain dạng:
+Vào **https://dashboard.ngrok.com/domains** → ngrok tự tạo domain dạng:
 ```
 https://your-random-name.ngrok-free.dev   ← URL này cố định mãi mãi ✅
 ```
