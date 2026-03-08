@@ -20,7 +20,8 @@
 5. [Cấu hình biến môi trường](#5-cấu-hình-biến-môi-trường)
 6. [Build và chạy](#6-build-và-chạy)
 7. [Kiểm tra và quản lý](#7-kiểm-tra-và-quản-lý)
-8. [Troubleshooting](#8-troubleshooting)
+8. [HTTPS với ngrok (Tuỳ chọn)](#8-https-với-ngrok-tuỳ-chọn)
+9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
@@ -211,6 +212,8 @@ curl http://<PUBLIC_IP>:8080/actuator/health
 ### Swagger UI:
 Mở browser: `http://<PUBLIC_IP>:8080/swagger-ui.html`
 
+Nếu dùng ngrok: `https://your-random-name.ngrok-free.dev/swagger-ui.html`
+
 ### Các lệnh quản lý thường dùng:
 ```bash
 # Dừng tất cả
@@ -244,7 +247,179 @@ docker compose up -d --build app
 
 ---
 
-## 8. Troubleshooting
+## 8. HTTPS với ngrok (Tuỳ chọn)
+
+> 💡 **Khi nào cần?** Nếu frontend deploy trên Vercel/Netlify (HTTPS) mà gọi API HTTP sẽ bị **Mixed Content** lỗi. Dùng ngrok để có HTTPS miễn phí với **URL cố định**, không cần domain, không cần cert.
+
+### Cách hoạt động
+```
+Frontend (https://...) → https://your-name.ngrok-free.app → [ngrok] → http://localhost:8080
+```
+
+### Bước 1: Đăng ký tài khoản ngrok miễn phí
+
+> 📝 Đăng ký tại: **https://dashboard.ngrok.com/signup**
+> Hỗ trợ đăng nhập bằng **Google** hoặc **GitHub** → không cần tạo thêm password.
+
+### Bước 2: Lấy authtoken
+
+Sau khi đăng nhập vào **https://dashboard.ngrok.com/get-started/your-authtoken** → Copy authtoken.
+
+### Bước 3: Cài đặt ngrok trên VM
+
+```bash
+# Tải và cài ngrok
+curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+  | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
+  && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
+  | sudo tee /etc/apt/sources.list.d/ngrok.list \
+  && sudo apt update \
+  && sudo apt install ngrok -y
+
+# Kiểm tra
+ngrok --version
+```
+
+### Bước 4: Cấu hình authtoken
+
+```bash
+ngrok config add-authtoken <YOUR_AUTHTOKEN>   # ← dán authtoken từ bước 2
+```
+
+### Bước 5: Lấy Static Domain miễn phí (URL cố định vĩnh viễn) ✅
+
+> Free account được tặng **1 static domain duy nhất** không bao giờ đổi, **không thể tạo thêm**.
+
+Vào **https://dashboard.ngrok.com/domains** → bấm **"New Domain"** → ngrok tự tạo domain dạng:
+```
+https://your-random-name.ngrok-free.dev   ← URL này cố định mãi mãi ✅
+```
+
+> ℹ️ **Lưu ý**: Suffix có thể là `.ngrok-free.dev` hoặc `.ngrok-free.app` tuỳ tài khoản. Copy chính xác domain từ dashboard, **không tự đổi suffix**.
+
+### Bước 6: Chạy ngrok với static domain
+
+> 📌 **Lưu ý suffix domain**: Copy **chính xác** domain từ dashboard (bước 5), **không tự đổi suffix** (`.dev` hay `.app`).
+
+```bash
+# Copy CHÍNH XÁC domain từ dashboard ngrok ở bước 5
+nohup ngrok http --url=wondrously-aplanatic-lacresha.ngrok-free.dev 8080 > ~/ngrok.log 2>&1 &
+
+# Kiểm tra ngrok đã chạy chưa (đợi vài giây)
+# "nohup: ignoring input" là BÌNH THƯỜNG, không phải lỗi
+sleep 3 && cat ~/ngrok.log
+
+# Xem thông tin tunnel qua API (quan trọng: lấy public URL)
+curl -s http://localhost:4040/api/tunnels | python3 -m json.tool
+```
+
+> ✅ Nếu thấy `"public_url": "https://wondrously-aplanatic-lacresha.ngrok-free.dev"` trong kết quả → ngrok đang hoạt động.
+
+> ℹ️ Thông báo `nohup: ignoring input` khi chạy lệnh là **bình thường**, ngrok vẫn chạy ở background.
+
+> ⚠️ Nếu `cat ~/ngrok.log` báo lỗi **ERR_NGROK_4018** → authtoken chưa được cấu hình đúng, chạy lại bước 4.
+
+> ⚠️ Nếu báo lỗi **ERR_NGROK_302** → static domain không khớp với authtoken, kiểm tra lại domain ở bước 5.
+
+> ⚠️ Nếu báo lỗi **ERR_NGROK_8012** hoặc "domain not found" → sai suffix (`.app` vs `.dev`), copy lại chính xác domain từ dashboard.
+
+### ⚠️ Trang cảnh báo ngrok ("You are about to visit...")
+
+Khi truy cập URL ngrok lần đầu trên **browser**, ngrok hiện trang cảnh báo này — chỉ cần nhấn **"Visit Site"** để tiếp tục. Trang này chỉ hiện **1 lần** cho mỗi browser session.
+
+**Vấn đề**: Frontend gọi API (fetch/axios) sẽ bị chặn bởi trang cảnh báo này → API trả về HTML thay vì JSON.
+
+**Fix phía frontend**: Thêm header `ngrok-skip-browser-warning: true` vào tất cả API request:
+
+```javascript
+// Ví dụ với axios
+axios.defaults.headers.common['ngrok-skip-browser-warning'] = 'true';
+
+// Hoặc với fetch
+fetch(url, {
+  headers: {
+    'ngrok-skip-browser-warning': 'true'
+  }
+})
+```
+
+**Fix phía backend** (khuyến nghị — chỉ cần làm 1 lần): Thêm cấu hình vào `application.yml` để tự động thêm header response:
+
+> Hoặc đơn giản nhất: **truy cập URL ngrok trên browser 1 lần** và nhấn "Visit Site" trước khi demo → browser session đã bypass, frontend sẽ hoạt động bình thường.
+
+### Bước 7: Cập nhật APP_URL trong `.env`
+
+```bash
+nano ~/novel-backend/.env
+```
+
+```dotenv
+# Đổi APP_URL thành URL ngrok static domain
+APP_URL=https://your-random-name.ngrok-free.dev
+```
+
+Restart app:
+```bash
+cd ~/novel-backend && docker compose restart app
+```
+
+### Các lệnh ngrok thường dùng
+
+```bash
+# Xem tunnel đang chạy
+curl http://localhost:4040/api/tunnels
+
+# Dừng ngrok
+pkill ngrok
+
+# Chạy lại (URL vẫn giữ nguyên vì dùng static domain)
+nohup ngrok http --url=your-random-name.ngrok-free.dev 8080 > ~/ngrok.log 2>&1 &
+```
+
+### Tự động chạy ngrok khi reboot VM
+
+```bash
+# Tạo systemd service
+sudo nano /etc/systemd/system/ngrok.service
+```
+
+Nội dung file:
+```ini
+[Unit]
+Description=ngrok tunnel
+After=network.target
+
+[Service]
+User=reikaikurumi
+ExecStart=/usr/bin/ngrok http --url=your-random-name.ngrok-free.dev 8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# Kích hoạt service
+sudo systemctl daemon-reload
+sudo systemctl enable ngrok
+sudo systemctl start ngrok
+sudo systemctl status ngrok
+```
+
+### So sánh các lựa chọn
+
+| | HTTP trực tiếp | ngrok (không static) | **ngrok Static Domain** ⭐ |
+|---|---|---|---|
+| Cần tài khoản | ❌ | ✅ | ✅ |
+| URL cố định | IP cố định nhưng HTTP | ❌ Đổi mỗi lần | ✅ Cố định vĩnh viễn |
+| HTTPS | ❌ | ✅ | ✅ |
+| Miễn phí | ✅ | ✅ | ✅ |
+| Phù hợp | Frontend HTTP | Demo 1 buổi | **Demo đồ án** |
+
+---
+
+## 9. Troubleshooting
 
 ### ❌ App không start / crash loop:
 ```bash
@@ -346,9 +521,10 @@ curl http://localhost:8080/actuator/health
 1. **Chuẩn bị trước buổi demo**: Deploy và test ít nhất 1 ngày trước
 2. **Backup .env**: Lưu file .env ở nơi an toàn (không commit lên Git)
 3. **Test API**: Dùng Postman collection có sẵn (`Novel-Backend-API.postman_collection.json`)
-4. **Swagger**: Demo API docs tại `http://<PUBLIC_IP>:8080/swagger-ui.html`
-5. **Nếu demo bị lỗi**: Có thể nhanh chóng restart bằng `docker compose restart`
-6. **Monitoring**: Mở terminal SSH sẵn để xem logs real-time khi demo
+4. **Swagger**: Demo API docs tại `https://wondrously-aplanatic-lacresha.ngrok-free.dev/swagger-ui.html` (sau khi bật ngrok) hoặc `http://<PUBLIC_IP>:8080/swagger-ui.html` (HTTP trực tiếp)
+5. **Nếu frontend dùng HTTPS**: Bật ngrok trước khi demo (xem [mục 8](#8-https-với-ngrok-tuỳ-chọn))
+6. **Nếu demo bị lỗi**: Có thể nhanh chóng restart bằng `docker compose restart`
+7. **Monitoring**: Mở terminal SSH sẵn để xem logs real-time khi demo
 
 > 🍀 **Chúc bạn bảo vệ đồ án thành công!**
 
