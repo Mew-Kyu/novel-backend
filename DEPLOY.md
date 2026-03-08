@@ -20,8 +20,9 @@
 5. [Cấu hình biến môi trường](#5-cấu-hình-biến-môi-trường)
 6. [Build và chạy](#6-build-và-chạy)
 7. [Kiểm tra và quản lý](#7-kiểm-tra-và-quản-lý)
-8. [HTTPS với ngrok (Tuỳ chọn)](#8-https-với-ngrok-tuỳ-chọn)
-9. [Troubleshooting](#9-troubleshooting)
+8. [Kết nối DBeaver từ máy local](#8-kết-nối-dbeaver-từ-máy-local)
+9. [HTTPS với ngrok (Tuỳ chọn)](#9-https-với-ngrok-tuỳ-chọn)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -247,7 +248,72 @@ docker compose up -d --build app
 
 ---
 
-## 8. HTTPS với ngrok (Tuỳ chọn)
+## 8. Kết nối DBeaver từ máy local
+
+> 💡 Dùng **SSH Tunnel** để kết nối an toàn — không cần mở port 5433 ra ngoài internet.
+
+### Cách 1: Cấu hình SSH Tunnel trực tiếp trong DBeaver ✅ (Khuyến nghị)
+
+**Bước 1**: Mở DBeaver → **Database** → **New Database Connection** → Chọn **PostgreSQL**
+
+**Bước 2**: Tab **SSH** — tích chọn ✅ **Use SSH Tunnel**, điền thông tin:
+
+| Trường | Giá trị |
+|---|---|
+| **Host/IP** | `<PUBLIC_IP>` |
+| **Port** | `22` |
+| **User name** | `reikaikurumi` |
+| **Authentication** | Password hoặc Public Key |
+| **Private key** | Đường dẫn tới file `.pem` (nếu dùng key) |
+
+**Bước 3**: Tab **Main** — điền thông tin PostgreSQL:
+
+| Trường | Giá trị |
+|---|---|
+| **Host** | `localhost` |
+| **Port** | `5433` |
+| **Database** | `noveldb` |
+| **Username** | `postgres` |
+| **Password** | Giá trị `DB_PASSWORD` trong file `.env` |
+
+Nhấn **Test Connection** → **Finish**.
+
+---
+
+### Cách 2: SSH Tunnel thủ công (PowerShell)
+
+```powershell
+# Mở SSH tunnel — giữ cửa sổ này mở trong suốt quá trình dùng DBeaver
+ssh -L 5433:localhost:5433 reikaikurumi@<PUBLIC_IP>
+```
+
+Sau đó kết nối DBeaver tới:
+- **Host**: `localhost`
+- **Port**: `5433`
+- **Database**: `noveldb`
+- **Username**: `postgres`
+- **Password**: Giá trị `DB_PASSWORD` trong `.env`
+
+---
+
+### Truy cập nhanh qua psql (trên VM)
+
+```bash
+# Vào psql trực tiếp trong container
+docker compose exec postgres psql -U postgres -d noveldb
+
+# Các lệnh psql thường dùng
+\dt          -- liệt kê tất cả bảng
+\d ten_bang  -- xem cấu trúc bảng
+\q           -- thoát
+
+# Chạy query nhanh không cần vào interactive mode
+docker compose exec postgres psql -U postgres -d noveldb -c "SELECT * FROM ten_bang LIMIT 10;"
+```
+
+---
+
+## 9. HTTPS với ngrok (Tuỳ chọn)
 
 > 💡 **Khi nào cần?** Nếu frontend deploy trên Vercel/Netlify (HTTPS) mà gọi API HTTP sẽ bị **Mixed Content** lỗi. Dùng ngrok để có HTTPS miễn phí với **URL cố định**, không cần domain, không cần cert.
 
@@ -419,7 +485,7 @@ sudo systemctl status ngrok
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 ### ❌ App không start / crash loop:
 ```bash
