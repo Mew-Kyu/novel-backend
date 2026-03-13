@@ -17,6 +17,14 @@ public class GeminiConfig {
     private Integer maxRetries;
     private Long retryDelayMs;
     private Long rateLimitDelayMs;
+    private Proxy proxy;
+
+    @Getter
+    @Setter
+    public static class Proxy {
+        private String host;
+        private Integer port;
+    }
 
     @Getter
     @Setter
@@ -25,4 +33,3 @@ public class GeminiConfig {
         private String embedding;
     }
 }
-
