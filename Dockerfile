@@ -28,6 +28,9 @@ FROM eclipse-temurin:25-jre
 
 WORKDIR /app
 
+# Install HEALTHCHECK (root)
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Add non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
@@ -46,10 +49,10 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8080/actuator/health || exit 1
 
-# JVM tuning for Standard_B1ms (2GB RAM) - limit heap to ~512MB
+# JVM tuning for B2s
 ENTRYPOINT ["java", \
     "-XX:+UseContainerSupport", \
-    "-XX:MaxRAMPercentage=50.0", \
+    "-XX:MaxRAMPercentage=70.0", \
     "-XX:+UseG1GC", \
     "-Djava.security.egd=file:/dev/./urandom", \
     "-jar", "app.jar"]
