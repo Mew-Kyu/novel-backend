@@ -9,6 +9,7 @@ import java.util.List;
 @AllArgsConstructor
 public class GeminiEmbeddingRequest {
     private Content content;
+    private Integer outputDimensionality;
 
     @Data
     @Builder

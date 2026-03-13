@@ -1,9 +1,11 @@
 package com.graduate.novel.domain.recommendation.metrics;
 
 import com.graduate.novel.domain.favorite.FavoriteRepository;
+import com.graduate.novel.domain.history.ReadingHistoryRepository;
 import com.graduate.novel.domain.rating.RatingRepository;
 import com.graduate.novel.domain.recommendation.RecommendationService;
 import com.graduate.novel.domain.story.StoryDto;
+import com.graduate.novel.domain.story.StoryRepository;
 import com.graduate.novel.domain.user.User;
 import com.graduate.novel.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,8 @@ public class MetricsService {
     private final RatingRepository ratingRepository;
     private final FavoriteRepository favoriteRepository;
     private final UserRepository userRepository;
+    private final StoryRepository storyRepository;
+    private final ReadingHistoryRepository readingHistoryRepository;
 
     /**
      * Calculate all metrics for a user's recommendations
@@ -149,12 +153,26 @@ public class MetricsService {
     public RecommendationMetrics evaluateSystem(int k, int maxUsers) {
         log.info("Evaluating recommendation system with K={}, maxUsers={}", k, maxUsers);
 
-        List<User> users = userRepository.findAll(PageRequest.of(0, maxUsers)).getContent();
-        List<Long> userIds = users.stream()
+        int fetchSize = Math.max(maxUsers * 10, maxUsers);
+        List<User> users = userRepository.findAll(PageRequest.of(0, fetchSize)).getContent();
+
+        List<Long> activeUserIds = users.stream()
             .map(User::getId)
+            .filter(this::hasEnoughRelevantItemsForEvaluation)
+            .limit(maxUsers)
             .collect(Collectors.toList());
 
-        return calculateAggregateMetrics(userIds, k);
+        if (activeUserIds.isEmpty()) {
+            log.warn("No active users with enough relevant items found; fallback to first {} users", maxUsers);
+            List<Long> fallbackIds = users.stream()
+                .map(User::getId)
+                .limit(maxUsers)
+                .collect(Collectors.toList());
+            return calculateAggregateMetrics(fallbackIds, k);
+        }
+
+        log.info("Using {} active users for evaluation (from {} fetched users)", activeUserIds.size(), users.size());
+        return calculateAggregateMetrics(activeUserIds, k);
     }
 
     // ========== Metric Calculation Methods ==========
@@ -258,71 +276,127 @@ public class MetricsService {
 
     /**
      * Coverage - What proportion of all items can be recommended
+     * Normalized: (unique items recommended) / (total items in catalog)
      */
     private double calculateCoverage(List<Long> userIds, int k) {
         Set<Long> allRecommendedItems = new HashSet<>();
+        int processedUsers = 0;
+        int skippedUsers = 0;
 
         for (Long userId : userIds) {
             try {
                 // Get relevant items and split for training
                 Set<Long> allRelevantItems = getRelevantItems(userId);
-                if (allRelevantItems.size() < 2) continue;
+                
+                if (allRelevantItems.isEmpty()) {
+                    skippedUsers++;
+                    log.debug("User {} has no relevant items, skipping coverage calculation", userId);
+                    continue;
+                }
 
-                TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
+                // Handle single item case
+                Set<Long> trainingSet;
+                if (allRelevantItems.size() == 1) {
+                    log.debug("User {} has only 1 relevant item, using as training set", userId);
+                    trainingSet = allRelevantItems;  // Use the single item as training
+                } else {
+                    TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
+                    trainingSet = split.trainingSet;
+                }
 
-                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, split.trainingSet);
+                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
                 recommendations.getStories().forEach(story ->
                     allRecommendedItems.add(story.id())
                 );
+                
+                processedUsers++;
+                log.debug("User {} - Coverage contribution: {} items", userId, recommendations.getStories().size());
             } catch (Exception e) {
                 log.warn("Failed to get recommendations for coverage calculation: {}", e.getMessage());
+                skippedUsers++;
             }
         }
 
-        // This is a simplified version - ideally you'd divide by total items in catalog
-        // For now, return the count (can be normalized later with total story count)
-        return allRecommendedItems.size();
+        log.info("Coverage calculation: processed {} users, skipped {}, total unique items: {}", 
+                 processedUsers, skippedUsers, allRecommendedItems.size());
+
+        // Normalize by total items in catalog
+        long totalItemsInCatalog = storyRepository.count();
+        
+        if (totalItemsInCatalog == 0) {
+            log.warn("No stories found in catalog, coverage = 0");
+            return 0.0;
+        }
+
+        double normalizedCoverage = (double) allRecommendedItems.size() / totalItemsInCatalog;
+        log.info("Coverage (normalized): {} / {} = {}", allRecommendedItems.size(), totalItemsInCatalog, normalizedCoverage);
+        
+        return normalizedCoverage;
     }
 
     /**
      * Diversity - Average pairwise dissimilarity of recommendations
-     * (Simplified version - counts unique genres)
+     * Global metric: (unique genres in all recommendations) / (total recommendations)
      */
     private double calculateDiversity(List<Long> userIds, int k) {
-        List<Double> diversityScores = new ArrayList<>();
+        Set<String> allUniqueGenres = new HashSet<>();
+        int[] totalRecommendations = {0};  // Use array to allow modification in lambda
+        int processedUsers = 0;
+        int skippedUsers = 0;
 
         for (Long userId : userIds) {
             try {
                 // Get relevant items and split for training
                 Set<Long> allRelevantItems = getRelevantItems(userId);
-                if (allRelevantItems.size() < 2) continue;
+                
+                if (allRelevantItems.isEmpty()) {
+                    skippedUsers++;
+                    log.debug("User {} has no relevant items, skipping diversity calculation", userId);
+                    continue;
+                }
 
-                TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
+                // Handle single item case
+                Set<Long> trainingSet;
+                if (allRelevantItems.size() == 1) {
+                    log.debug("User {} has only 1 relevant item, using as training set", userId);
+                    trainingSet = allRelevantItems;
+                } else {
+                    TrainTestSplit split = createTrainTestSplit(allRelevantItems, userId);
+                    trainingSet = split.trainingSet;
+                }
 
-                var recommendations = recommendationService.getHybridRecommendationsWithExclusions
-                        (userId, k, split.trainingSet);
+                var recommendations = recommendationService.getHybridRecommendationsWithExclusions(userId, k, trainingSet);
 
                 // Count unique genres in recommendations
-                Set<String> uniqueGenres = new HashSet<>();
                 recommendations.getStories().forEach(story -> {
                     if (story.genres() != null) {
                         story.genres().forEach(genre ->
-                            uniqueGenres.add(genre.name())
+                            allUniqueGenres.add(genre.name())
                         );
                     }
+                    totalRecommendations[0]++;
                 });
-
-                // Diversity = unique genres / total recommendations
-                double diversity = recommendations.getStories().isEmpty() ? 0.0 :
-                    (double) uniqueGenres.size() / recommendations.getStories().size();
-                diversityScores.add(diversity);
+                
+                processedUsers++;
             } catch (Exception e) {
                 log.warn("Failed to calculate diversity: {}", e.getMessage());
+                skippedUsers++;
             }
         }
 
-        return diversityScores.isEmpty() ? 0.0 :
-            diversityScores.stream().mapToDouble(d -> d).average().orElse(0.0);
+        log.info("Diversity calculation: processed {} users, skipped {}, total recommendations: {}, unique genres: {}", 
+                 processedUsers, skippedUsers, totalRecommendations[0], allUniqueGenres.size());
+
+        // Global diversity = unique genres / total recommendations
+        if (totalRecommendations[0] == 0) {
+            log.warn("No recommendations generated, diversity = 0");
+            return 0.0;
+        }
+
+        double diversity = (double) allUniqueGenres.size() / totalRecommendations[0];
+        log.info("Diversity (global): {} / {} = {}", allUniqueGenres.size(), totalRecommendations[0], diversity);
+        
+        return diversity;
     }
 
     // ========== Helper Methods ==========
@@ -341,14 +415,20 @@ public class MetricsService {
     }
 
     /**
-     * Split relevant items into 80% training and 20% test sets
+     * Split relevant items into 70% training and 30% test sets
+     * Changed from 80-20 to 70-30 to increase test set size
+     * This fixes the issue where test set was too small (1 item)
+     * allowing Recall to vary instead of being stuck at 33.33%
      * Uses deterministic shuffle based on userId for reproducibility
      */
     private TrainTestSplit createTrainTestSplit(Set<Long> allRelevantItems, Long userId) {
         List<Long> relevantList = new ArrayList<>(allRelevantItems);
         Collections.shuffle(relevantList, new Random(userId)); // Deterministic shuffle based on userId
 
-        int splitIndex = (int) (relevantList.size() * 0.8);
+        // Changed from 0.8 to 0.7 (70% training, 30% test)
+        // Rationale: Increases test set size to allow better evaluation
+        // Example: User with 5 items: training=3, test=2 (instead of training=4, test=1)
+        int splitIndex = (int) (relevantList.size() * 0.7);
         Set<Long> trainingSet = new HashSet<>(relevantList.subList(0, splitIndex));
         Set<Long> testSet = new HashSet<>(relevantList.subList(splitIndex, relevantList.size()));
 
@@ -378,7 +458,20 @@ public class MetricsService {
             }
         });
 
+        // From strong reading signals (user has made meaningful reading progress)
+        var history = readingHistoryRepository.findByUserIdOrderByLastReadAtDesc(userId, PageRequest.of(0, 300));
+        history.getContent().forEach(entry -> {
+            if (entry.getStory() != null && entry.getProgressPercent() != null && entry.getProgressPercent() >= 60) {
+                relevant.add(entry.getStory().getId());
+            }
+        });
+
         return relevant;
+    }
+
+    private boolean hasEnoughRelevantItemsForEvaluation(Long userId) {
+        // Need at least 2 relevant items so train/test split has a non-empty test set.
+        return getRelevantItems(userId).size() >= 2;
     }
 
     /**

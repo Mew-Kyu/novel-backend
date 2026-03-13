@@ -167,6 +167,9 @@ public class GeminiService {
      * Generate embedding vector for text
      */
     public float[] generateEmbedding(String text) {
+        log.info("===== EMBEDDING GENERATION START =====");
+        log.info("Text to embed: '{}'", text.substring(0, Math.min(100, text.length())));
+
         int retries = 0;
         int maxRetries = geminiConfig.getMaxRetries();
         long retryDelay = 2000; // Start with 2 seconds
@@ -178,12 +181,16 @@ public class GeminiService {
                         geminiConfig.getModel().getEmbedding(),
                         geminiConfig.getKey());
 
+                log.info("Embedding Model: {}", geminiConfig.getModel().getEmbedding());
+                log.info("Output Dimensionality: {}", geminiConfig.getModel().getOutputDimensionality());
+
                 GeminiEmbeddingRequest request = GeminiEmbeddingRequest.builder()
                         .content(GeminiEmbeddingRequest.Content.builder()
                                 .parts(List.of(GeminiEmbeddingRequest.Part.builder()
                                         .text(text)
                                         .build()))
                                 .build())
+                        .outputDimensionality(geminiConfig.getModel().getOutputDimensionality())
                         .build();
 
                 HttpHeaders headers = new HttpHeaders();
@@ -192,18 +199,23 @@ public class GeminiService {
 
                 HttpEntity<GeminiEmbeddingRequest> entity = new HttpEntity<>(request, headers);
 
-                log.debug("Generating embedding from Gemini API (attempt {}/{})", retries + 1, maxRetries + 1);
+                log.info("Calling Gemini Embedding API (attempt {}/{})", retries + 1, maxRetries + 1);
 
                 ResponseEntity<GeminiEmbeddingResponse> response = geminiRestTemplate.postForEntity(
                         url, entity, GeminiEmbeddingResponse.class);
 
                 if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                     float[] embedding = response.getBody().getEmbedding().getValues();
-                    log.debug("Successfully generated embedding with {} dimensions", embedding.length);
+                    log.info("✅ Successfully generated embedding with {} dimensions", embedding.length);
+                    log.info("First 5 values: [{}, {}, {}, {}, {}]",
+                        embedding[0], embedding[1], embedding[2], embedding[3], embedding[4]);
+                    log.info("===== EMBEDDING GENERATION END - SUCCESS =====");
                     return embedding;
                 }
 
-                log.error("Failed to generate embedding: No valid response from Gemini");
+                log.error("❌ Failed to generate embedding: No valid response from Gemini");
+                log.error("Response status: {}", response.getStatusCode());
+                log.error("Response body: {}", response.getBody());
                 return null;
 
             } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {

@@ -31,5 +31,6 @@ public class GeminiConfig {
     public static class Model {
         private String text;
         private String embedding;
+        private Integer outputDimensionality;
     }
 }

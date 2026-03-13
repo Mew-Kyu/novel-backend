@@ -44,6 +44,10 @@ gemini:
   api:
     key: test-key
     base-url: https://generativelanguage.googleapis.com/v1beta
+    model:
+      text: gemini-3-flash-preview
+      embedding: gemini-embedding-2-preview
+      output-dimensionality: 768
 
 app:
   url: http://localhost:3000

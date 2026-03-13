@@ -33,12 +33,13 @@ public class RecommendationService {
      */
     @Transactional(readOnly = true)
     public RecommendationDto getHybridRecommendations(Long userId, int limit) {
+        int normalizedLimit = normalizeLimit(limit);
         log.info("Generating hybrid recommendations for user: {}", userId);
 
         // Get stories to exclude (already interacted)
         Set<Long> excludeStoryIds = userPreferenceService.getUserInteractedStoryIds(userId);
 
-        return getHybridRecommendationsWithExclusions(userId, limit, excludeStoryIds);
+        return getHybridRecommendationsWithExclusions(userId, normalizedLimit, excludeStoryIds);
     }
 
     /**
@@ -46,14 +47,16 @@ public class RecommendationService {
      */
     @Transactional(readOnly = true)
     public RecommendationDto getHybridRecommendationsWithExclusions(Long userId, int limit, Set<Long> excludeStoryIds) {
-        log.info("Generating hybrid recommendations for user {} with {} exclusions", userId, excludeStoryIds.size());
+        int normalizedLimit = normalizeLimit(limit);
+        Set<Long> safeExcludeIds = excludeStoryIds != null ? excludeStoryIds : Collections.emptySet();
+        log.info("Generating hybrid recommendations for user {} with {} exclusions", userId, safeExcludeIds.size());
 
         // Combine multiple recommendation sources with weights
         Map<Long, Double> storyScores = new HashMap<>();
 
         // 1. Content-based (40% weight) - based on genre preferences
         try {
-            List<Story> contentBased = getContentBasedRecommendationsInternal(userId, limit * 2, excludeStoryIds);
+            List<Story> contentBased = getContentBasedRecommendationsInternal(userId, normalizedLimit * 2, safeExcludeIds);
             for (int i = 0; i < contentBased.size(); i++) {
                 Story story = contentBased.get(i);
                 double score = (contentBased.size() - i) * 0.4; // Decaying score
@@ -66,7 +69,7 @@ public class RecommendationService {
 
         // 2. Collaborative filtering (30% weight) - based on similar users
         try {
-            List<Story> collaborative = getCollaborativeRecommendationsInternal(userId, limit * 2, excludeStoryIds);
+            List<Story> collaborative = getCollaborativeRecommendationsInternal(userId, normalizedLimit * 2, safeExcludeIds);
             for (int i = 0; i < collaborative.size(); i++) {
                 Story story = collaborative.get(i);
                 double score = (collaborative.size() - i) * 0.3;
@@ -80,10 +83,10 @@ public class RecommendationService {
         // 3. Trending stories (20% weight) - popular recent stories
         try {
             LocalDateTime since = LocalDateTime.now().minusDays(30);
-            var trending = storyRepository.findTrendingStories(since, PageRequest.of(0, limit));
+            var trending = storyRepository.findTrendingStories(since, PageRequest.of(0, normalizedLimit));
             for (int i = 0; i < trending.getContent().size(); i++) {
                 Story story = trending.getContent().get(i);
-                if (!excludeStoryIds.contains(story.getId())) {
+                if (!safeExcludeIds.contains(story.getId())) {
                     double score = (trending.getContent().size() - i) * 0.2;
                     storyScores.merge(story.getId(), score, Double::sum);
                 }
@@ -96,13 +99,13 @@ public class RecommendationService {
         // 4. High-rated stories (10% weight) - fallback
         try {
             var highRated = storyRepository.findAll(
-                PageRequest.of(0, limit,
+                PageRequest.of(0, normalizedLimit,
                     org.springframework.data.domain.Sort.by("averageRating").descending()
                         .and(org.springframework.data.domain.Sort.by("totalRatings").descending()))
             );
             for (int i = 0; i < highRated.getContent().size(); i++) {
                 Story story = highRated.getContent().get(i);
-                if (!excludeStoryIds.contains(story.getId()) && story.getTotalRatings() != null && story.getTotalRatings() > 10) {
+                if (!safeExcludeIds.contains(story.getId()) && story.getTotalRatings() != null && story.getTotalRatings() > 10) {
                     double score = (highRated.getContent().size() - i) * 0.1;
                     storyScores.merge(story.getId(), score, Double::sum);
                 }
@@ -115,7 +118,7 @@ public class RecommendationService {
         // Sort by combined score and get top N
         List<Long> topStoryIds = storyScores.entrySet().stream()
             .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
-            .limit(limit)
+            .limit(normalizedLimit)
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
 
@@ -148,10 +151,11 @@ public class RecommendationService {
      */
     @Transactional(readOnly = true)
     public RecommendationDto getContentBasedRecommendations(Long userId, int limit) {
+        int normalizedLimit = normalizeLimit(limit);
         log.info("Generating content-based recommendations for user: {}", userId);
 
         Set<Long> excludeStoryIds = userPreferenceService.getUserInteractedStoryIds(userId);
-        List<Story> stories = getContentBasedRecommendationsInternal(userId, limit, excludeStoryIds);
+        List<Story> stories = getContentBasedRecommendationsInternal(userId, normalizedLimit, excludeStoryIds);
 
         List<StoryDto> storyDtos = stories.stream()
             .map(storyMapper::toDto)
@@ -170,10 +174,11 @@ public class RecommendationService {
      */
     @Transactional(readOnly = true)
     public RecommendationDto getCollaborativeRecommendations(Long userId, int limit) {
+        int normalizedLimit = normalizeLimit(limit);
         log.info("Generating collaborative recommendations for user: {}", userId);
 
         Set<Long> excludeStoryIds = userPreferenceService.getUserInteractedStoryIds(userId);
-        List<Story> stories = getCollaborativeRecommendationsInternal(userId, limit, excludeStoryIds);
+        List<Story> stories = getCollaborativeRecommendationsInternal(userId, normalizedLimit, excludeStoryIds);
 
         List<StoryDto> storyDtos = stories.stream()
             .map(storyMapper::toDto)
@@ -192,6 +197,7 @@ public class RecommendationService {
      */
     @Transactional(readOnly = true)
     public RecommendationDto getSimilarStories(Long storyId, Long userId, int limit) {
+        int normalizedLimit = normalizeLimit(limit);
         log.info("Finding similar stories to story: {}", storyId);
 
         Story sourceStory = storyRepository.findById(storyId)
@@ -217,14 +223,14 @@ public class RecommendationService {
                 log.debug("Attempting semantic similarity search for story: {}", storyId);
                 List<Long> similarIds = storyRepository.findStoryIdsBySimilarity(
                     sourceStory.getEmbedding(),
-                    limit * 2
+                    normalizedLimit * 2
                 );
 
                 if (similarIds != null && !similarIds.isEmpty()) {
                     similarIds.removeIf(excludeStoryIds::contains);
-                    List<Story> semanticSimilar = storyRepository.findByIdInWithGenres(
-                        similarIds.stream().limit(limit).collect(Collectors.toList())
-                    );
+                    List<Long> topSimilarIds = similarIds.stream().limit(normalizedLimit).collect(Collectors.toList());
+                    List<Story> semanticSimilar = storyRepository.findByIdInWithGenres(topSimilarIds);
+                    sortStoriesByIdOrder(semanticSimilar, topSimilarIds);
                     similarStories.addAll(semanticSimilar);
                     log.info("Found {} semantically similar stories", semanticSimilar.size());
                 }
@@ -236,20 +242,20 @@ public class RecommendationService {
         }
 
         // 2. Fallback to genre-based similarity
-        if (similarStories.size() < limit && sourceStory.getGenres() != null && !sourceStory.getGenres().isEmpty()) {
+        if (similarStories.size() < normalizedLimit && sourceStory.getGenres() != null && !sourceStory.getGenres().isEmpty()) {
             try {
                 Long primaryGenreId = sourceStory.getGenres().iterator().next().getId();
                 log.debug("Using genre-based similarity with genre ID: {}", primaryGenreId);
 
                 var genreBased = storyRepository.findByGenreId(
                     primaryGenreId,
-                    PageRequest.of(0, limit * 2)
+                    PageRequest.of(0, normalizedLimit * 2)
                 );
 
                 List<Story> filtered = genreBased.getContent().stream()
                     .filter(s -> !excludeStoryIds.contains(s.getId()))
                     .filter(s -> !similarStories.contains(s))
-                    .limit(limit - similarStories.size())
+                    .limit(normalizedLimit - similarStories.size())
                     .toList();
 
                 similarStories.addAll(filtered);
@@ -264,11 +270,11 @@ public class RecommendationService {
             log.warn("No similar stories found using embeddings or genres, using trending stories as fallback");
             try {
                 LocalDateTime since = LocalDateTime.now().minusDays(30);
-                var trending = storyRepository.findTrendingStories(since, PageRequest.of(0, limit));
+                var trending = storyRepository.findTrendingStories(since, PageRequest.of(0, normalizedLimit));
 
                 List<Story> filtered = trending.getContent().stream()
                     .filter(s -> !excludeStoryIds.contains(s.getId()))
-                    .limit(limit)
+                    .limit(normalizedLimit)
                     .toList();
 
                 similarStories.addAll(filtered);
@@ -297,24 +303,31 @@ public class RecommendationService {
     // ========== Internal Helper Methods ==========
 
     private List<Story> getContentBasedRecommendationsInternal(Long userId, int limit, Set<Long> excludeIds) {
+        int normalizedLimit = normalizeLimit(limit);
+
         // Get user's genre preferences
         List<GenrePreference> preferences = userPreferenceService.analyzeGenrePreferences(userId);
 
         if (preferences.isEmpty()) {
-            log.info("User {} has no genre preferences, returning trending stories", userId);
+            log.info("User {} has no genre preferences, returning filtered trending stories", userId);
             return storyRepository.findTrendingStories(
-                LocalDateTime.now().minusDays(30),
-                PageRequest.of(0, limit)
-            ).getContent();
+                    LocalDateTime.now().minusDays(30),
+                    PageRequest.of(0, normalizedLimit * 2)
+                )
+                .getContent()
+                .stream()
+                .filter(s -> !excludeIds.contains(s.getId()))
+                .limit(normalizedLimit)
+                .toList();
         }
 
         // Get stories from preferred genres
         List<Story> recommendations = new ArrayList<>();
 
         for (GenrePreference pref : preferences) {
-            if (recommendations.size() >= limit) break;
+            if (recommendations.size() >= normalizedLimit) break;
 
-            int needed = limit - recommendations.size();
+            int needed = normalizedLimit - recommendations.size();
             var genreStories = storyRepository.findByGenreId(
                 pref.getGenreId(),
                 PageRequest.of(0, needed * 2)
@@ -333,6 +346,8 @@ public class RecommendationService {
     }
 
     private List<Story> getCollaborativeRecommendationsInternal(Long userId, int limit, Set<Long> excludeIds) {
+        int normalizedLimit = normalizeLimit(limit);
+
         // Find similar users
         List<UserSimilarity> similarUsers = userPreferenceService.findSimilarUsers(userId, 10);
 
@@ -364,11 +379,24 @@ public class RecommendationService {
         // Sort by score and get top stories
         List<Long> topStoryIds = storyScores.entrySet().stream()
             .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
-            .limit(limit)
+            .limit(normalizedLimit)
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
 
-        return storyRepository.findByIdInWithGenres(topStoryIds);
+        List<Story> stories = storyRepository.findByIdInWithGenres(topStoryIds);
+        sortStoriesByIdOrder(stories, topStoryIds);
+        return stories;
+    }
+
+    private int normalizeLimit(int limit) {
+        return Math.max(1, Math.min(limit, 50));
+    }
+
+    private void sortStoriesByIdOrder(List<Story> stories, List<Long> orderedIds) {
+        Map<Long, Integer> idToIndex = new HashMap<>();
+        for (int i = 0; i < orderedIds.size(); i++) {
+            idToIndex.put(orderedIds.get(i), i);
+        }
+        stories.sort(Comparator.comparingInt(s -> idToIndex.getOrDefault(s.getId(), Integer.MAX_VALUE)));
     }
 }
-

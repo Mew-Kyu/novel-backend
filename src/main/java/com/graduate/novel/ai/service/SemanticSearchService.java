@@ -8,7 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -17,6 +20,14 @@ public class SemanticSearchService {
 
     private final GeminiService geminiService;
     private final StoryRepository storyRepository;
+
+    /**
+     * Public method to generate embedding (for debugging/testing)
+     * This is exposed for the debug endpoint
+     */
+    public float[] generateEmbedding(String text) {
+        return geminiService.generateEmbedding(text);
+    }
 
     /**
      * Generate and save embedding for a story
@@ -147,40 +158,74 @@ public class SemanticSearchService {
      */
     @Transactional(readOnly = true)
     public List<Story> searchBySimilarity(String query, int limit) {
-        log.info("Performing semantic search for query: '{}'", query);
+        log.info("===== SEMANTIC SEARCH START =====");
+        log.info("Query: '{}'", query);
+        log.info("Limit: {}", limit);
+
+        if (query == null || query.trim().isEmpty()) {
+            log.warn("Empty query received for semantic search");
+            return List.of();
+        }
 
         try {
-            // Generate embedding for the search query (may throw RateLimitExceededException)
+            // Step 1: Generate embedding for the search query
+            log.info("Generating embedding for query...");
             float[] queryEmbedding = geminiService.generateEmbedding(query);
 
             if (queryEmbedding == null) {
-                log.error("Failed to generate embedding for query");
-                throw new RuntimeException("Failed to generate query embedding");
+                log.error("❌ CRITICAL: queryEmbedding is NULL!");
+                throw new RuntimeException("Failed to generate query embedding - embedding is null");
             }
 
-            // Convert to PostgreSQL vector format string
-            String queryEmbeddingString = convertFloatArrayToVectorString(queryEmbedding);
+            log.info("✅ Embedding generated successfully");
+            log.info("Embedding dimensions: {}", queryEmbedding.length);
+            log.info("First 5 values: [{}, {}, {}, {}, {}]",
+                queryEmbedding[0], queryEmbedding[1], queryEmbedding[2], queryEmbedding[3], queryEmbedding[4]);
 
-            // Step 1: Find story IDs using vector similarity (native query required for vector operations)
+            // Step 2: Convert to PostgreSQL vector format string
+            String queryEmbeddingString = convertFloatArrayToVectorString(queryEmbedding);
+            log.info("Vector string length: {}", queryEmbeddingString.length());
+            log.info("Vector string preview: {}", queryEmbeddingString.substring(0, Math.min(100, queryEmbeddingString.length())) + "...");
+
+            // Step 3: Find story IDs using vector similarity
+            log.info("Finding similar stories from database...");
             List<Long> storyIds = storyRepository.findStoryIdsBySimilarity(queryEmbeddingString, limit);
 
+            log.info("✅ Database query returned {} story IDs", storyIds.size());
+            if (!storyIds.isEmpty()) {
+                log.info("Story IDs found: {}", storyIds.stream().limit(5).toList());
+            }
+
             if (storyIds.isEmpty()) {
-                log.info("No similar stories found");
+                log.info("⚠️ No similar stories found in database");
                 return List.of();
             }
 
-            // Step 2: Fetch full Story entities with genres eagerly loaded to avoid lazy initialization error
+            // Step 4: Fetch full Story entities
             List<Story> results = storyRepository.findByIdInWithGenres(storyIds);
 
-            log.info("Found {} similar stories", results.size());
+            // Preserve ranking from vector similarity query.
+            Map<Long, Integer> rankById = new HashMap<>();
+            for (int i = 0; i < storyIds.size(); i++) {
+                rankById.put(storyIds.get(i), i);
+            }
+            results.sort(Comparator.comparingInt(story -> rankById.getOrDefault(story.getId(), Integer.MAX_VALUE)));
+
+            log.info("✅ Found {} similar stories with details", results.size());
+            results.forEach(story ->
+                log.info("  - Story {}: {} (embedding null: {})",
+                    story.getId(), story.getTitle(), story.getEmbedding() == null)
+            );
+
+            log.info("===== SEMANTIC SEARCH END - SUCCESS =====");
             return results;
 
         } catch (RateLimitExceededException e) {
-            // Re-throw to let GlobalExceptionHandler handle it
-            log.warn("Rate limit exceeded during semantic search for query: '{}'", query);
+            log.warn("❌ Rate limit exceeded during semantic search for query: '{}'", query);
             throw e;
         } catch (Exception e) {
-            log.error("Error during semantic search for query '{}': {}", query, e.getMessage(), e);
+            log.error("❌ Error during semantic search for query '{}': {}", query, e.getMessage());
+            log.error("Exception trace:", e);
             throw new RuntimeException("Failed to perform semantic search: " + e.getMessage(), e);
         }
     }
@@ -235,4 +280,3 @@ public class SemanticSearchService {
         return sb.toString();
     }
 }
-

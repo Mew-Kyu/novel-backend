@@ -109,7 +109,7 @@ public class OfflineEvaluator {
                 sb.append(String.format("  MAP@K: %.4f\n", m.getMapAtK()));
                 sb.append(String.format("  NDCG@K: %.4f\n", m.getNdcgAtK()));
                 sb.append(String.format("  MRR: %.4f\n", m.getMrr()));
-                sb.append(String.format("  Coverage: %.2f items\n", m.getCoverage()));
+                sb.append(String.format("  Coverage (ratio): %.4f\n", m.getCoverage()));
                 sb.append(String.format("  Diversity: %.4f\n\n", m.getDiversity()));
             }
 

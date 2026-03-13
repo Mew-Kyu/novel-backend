@@ -116,22 +116,81 @@ public class AiController {
      */
     @PostMapping("/search/semantic")
     public ResponseEntity<SemanticSearchResponse> semanticSearch(@RequestBody SemanticSearchRequest request) {
-        log.info("Performing semantic search for query: {}", request.getQuery());
+        try {
+            int rawLimit = request.getLimit() != null ? request.getLimit() : 5;
+            int limit = Math.max(1, Math.min(rawLimit, 50));
 
-        int limit = request.getLimit() != null ? request.getLimit() : 10;
-        List<Story> stories = semanticSearchService.searchBySimilarity(request.getQuery(), limit);
+            // Let service handle embedding generation + similarity search in one flow.
+            List<Story> stories = semanticSearchService.searchBySimilarity(request.getQuery(), limit);
 
-        List<StoryDto> storyDtos = stories.stream()
-                .map(storyMapper::toDto)
-                .collect(Collectors.toList());
+            List<StoryDto> storyDtos = stories.stream()
+                    .map(storyMapper::toDto)
+                    .collect(Collectors.toList());
 
-        SemanticSearchResponse response = SemanticSearchResponse.builder()
-                .query(request.getQuery())
-                .results(storyDtos)
-                .totalResults(storyDtos.size())
-                .build();
+            SemanticSearchResponse response = SemanticSearchResponse.builder()
+                    .query(request.getQuery())
+                    .results(storyDtos)
+                    .totalResults(storyDtos.size())
+                    .build();
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error during semantic search: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Diagnostic endpoint to test semantic search with different queries
+     * Returns detailed debug information
+     */
+    @PostMapping("/search/semantic/debug")
+    public ResponseEntity<Map<String, Object>> semanticSearchDebug(@RequestBody SemanticSearchRequest request) {
+        Map<String, Object> debugInfo = new HashMap<>();
+
+        try {
+            float[] queryEmbedding = semanticSearchService.generateEmbedding(request.getQuery());
+
+            debugInfo.put("queryEmbedding_generated", queryEmbedding != null);
+            if (queryEmbedding != null) {
+                debugInfo.put("embedding_dimensions", queryEmbedding.length);
+                debugInfo.put("first_5_values", new float[]{
+                    queryEmbedding[0], queryEmbedding[1], queryEmbedding[2],
+                    queryEmbedding[3], queryEmbedding[4]
+                });
+
+                int limit = request.getLimit() != null ? request.getLimit() : 10;
+                List<Story> stories = semanticSearchService.searchBySimilarity(request.getQuery(), limit);
+
+                debugInfo.put("stories_found", stories.size());
+                debugInfo.put("search_result_ids", stories.stream().map(Story::getId).toList());
+                debugInfo.put("search_result_titles", stories.stream().map(Story::getTitle).toList());
+
+                List<StoryDto> storyDtos = stories.stream()
+                        .map(storyMapper::toDto)
+                        .collect(Collectors.toList());
+
+                SemanticSearchResponse response = SemanticSearchResponse.builder()
+                        .query(request.getQuery())
+                        .results(storyDtos)
+                        .totalResults(storyDtos.size())
+                        .build();
+
+                debugInfo.put("response", response);
+                debugInfo.put("status", "SUCCESS");
+            } else {
+                debugInfo.put("status", "FAILED - Embedding is NULL");
+            }
+
+        } catch (Exception e) {
+            log.error("Debug endpoint error: {}", e.getMessage(), e);
+            debugInfo.put("status", "ERROR");
+            debugInfo.put("error", e.getMessage());
+            debugInfo.put("error_type", e.getClass().getSimpleName());
+        }
+
+        return ResponseEntity.ok(debugInfo);
     }
 
     /**
@@ -162,4 +221,3 @@ public class AiController {
         return ResponseEntity.ok(response);
     }
 }
-
